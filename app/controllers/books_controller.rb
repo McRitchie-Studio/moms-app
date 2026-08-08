@@ -1,4 +1,7 @@
 class BooksController < ApplicationController
+  # Public family site — no sign-in required to browse or listen.
+  skip_before_action :require_authentication
+
   def index
     @books = Book.order(created_at: :desc)
   end

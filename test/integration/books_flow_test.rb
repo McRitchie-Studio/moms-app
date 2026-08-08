@@ -1,17 +1,7 @@
 require "test_helper"
 
 class BooksFlowTest < ActionDispatch::IntegrationTest
-  def sign_in(user)
-    token = MagicLink.generate(email: user.email, return_to: nil)
-    post magic_link_consume_path(token: token)
-  end
-
-  setup do
-    @user = User.create!(name: "Mom", email: "mom@example.com")
-    sign_in(@user)
-  end
-
-  test "library index and the digest form render" do
+  test "library index and the digest form render (public)" do
     get books_path
     assert_response :success
 

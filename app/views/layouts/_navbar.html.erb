@@ -1,0 +1,29 @@
+<%# Public family-site navbar (overrides the engine base): brand + section links
+    + theme toggle. No sign-in — the whole site is open. %>
+<%
+  words = Studio.app_name.split
+  last_word = words.pop
+  prefix = words.join(" ")
+  logo_path = Studio.logo_for("Navbar Logo")
+%>
+<header x-data="{ scrolled: false }" @scroll.window="scrolled = window.scrollY > 20"
+        class="sticky top-0 z-50 bg-page transition-shadow duration-300"
+        :class="scrolled && 'shadow-lg border-b border-subtle'">
+  <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
+    <%= link_to root_path, class: "inline-flex items-center gap-3 group" do %>
+      <% if logo_path %>
+        <img src="<%= logo_path %>" alt="<%= Studio.app_name %>"
+             class="w-10 h-10 rounded-full shadow group-hover:scale-105 transition">
+      <% end %>
+      <span class="text-2xl font-extrabold text-heading tracking-tight">
+        <%= prefix %> <span class="text-primary"><%= last_word %></span>
+      </span>
+    <% end %>
+
+    <nav class="flex items-center gap-5">
+      <%= link_to "Photos", slideshow_path, class: "text-body hover:text-primary text-sm font-semibold transition" %>
+      <%= link_to "Library", books_path, class: "text-body hover:text-primary text-sm font-semibold transition" %>
+      <%= render "components/theme_toggle_morph" %>
+    </nav>
+  </div>
+</header>
