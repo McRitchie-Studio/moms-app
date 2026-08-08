@@ -1,0 +1,77 @@
+<% content_for :title, @book.title %>
+
+<div class="mb-4"><%= link_to "← Library", books_path, class: "text-muted hover:text-primary text-sm" %></div>
+
+<div class="grid md:grid-cols-3 gap-6">
+  <div class="md:col-span-1">
+    <div class="card p-0 overflow-hidden">
+      <% if @book.cover.attached? %>
+        <%= image_tag @book.cover, class: "w-full object-cover", alt: @book.title %>
+      <% else %>
+        <div class="aspect-square bg-surface-alt flex items-center justify-center text-muted">no cover</div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="md:col-span-2">
+    <h1 class="text-3xl font-extrabold text-heading"><%= @book.title %></h1>
+    <p class="text-secondary text-lg">by <%= @book.author %></p>
+    <% if @book.narrator.present? %>
+      <p class="text-muted">Read by <%= @book.narrator %></p>
+    <% end %>
+
+    <div class="flex flex-wrap gap-4 mt-3 text-sm text-muted">
+      <% if @book.full_duration_seconds %>
+        <span>Full book: <strong class="text-body"><%= format_hms(@book.full_duration_seconds) %></strong></span>
+      <% end %>
+      <% if @book.audio_duration_seconds %>
+        <span>This record: <strong class="text-body"><%= format_hms(@book.audio_duration_seconds) %></strong> (<%= @book.included_chapters.size %> ch)</span>
+      <% end %>
+      <span>Source: <%= link_to "LibriVox", @book.source_url, class: "text-primary", target: "_blank", rel: "noopener" %></span>
+    </div>
+
+    <div class="mt-5">
+      <% if @book.ready? && @book.audio.attached? %>
+        <audio id="book-player" controls preload="metadata" class="w-full" src="<%= rails_blob_path(@book.audio) %>"></audio>
+        <div class="flex flex-wrap gap-2 mt-3">
+          <% @book.chapter_offsets.each do |chapter, start| %>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="var p=document.getElementById('book-player'); p.currentTime=<%= start %>; p.play();">
+              <%= chapter.position %>. <%= chapter.title %>
+              <span class="text-2xs opacity-70">(<%= format_hms(chapter.duration_seconds) %>)</span>
+            </button>
+          <% end %>
+        </div>
+      <% elsif @book.failed? %>
+        <div class="card p-4 border border-danger/40">
+          <p class="text-danger font-semibold">Digest failed</p>
+          <p class="text-muted text-sm"><%= @book.error_message %></p>
+        </div>
+      <% else %>
+        <div class="card p-4">
+          <p class="text-heading font-semibold">Stitching the audio…</p>
+          <p class="text-muted text-sm">Downloading and concatenating the first <%= @book.included_chapters.size %> chapters. This page refreshes automatically.</p>
+        </div>
+        <script>setTimeout(function () { location.reload(); }, 5000);</script>
+      <% end %>
+    </div>
+
+    <% if @book.description.present? %>
+      <p class="text-body mt-6 leading-relaxed"><%= truncate(@book.description, length: 500) %></p>
+    <% end %>
+
+    <h2 class="text-lg font-bold text-heading mt-8 mb-2">Chapters</h2>
+    <ul class="divide-y divide-subtle">
+      <% @book.chapters.each do |chapter| %>
+        <li class="py-2 flex items-center justify-between text-sm">
+          <span class="<%= chapter.included ? 'text-body' : 'text-muted' %>">
+            <%= chapter.position %>. <%= chapter.title %>
+          </span>
+          <span class="text-muted">
+            <%= format_hms(chapter.duration_seconds) %><%= " · in record" if chapter.included %>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>
