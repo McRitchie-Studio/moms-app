@@ -1,0 +1,27 @@
+<%# Library grid — shared by /books and the root dashboard. Local: books. %>
+<% if books.empty? %>
+  <div class="empty-state">
+    No books yet. <%= link_to "Digest your first one", new_book_path, class: "text-primary underline" %>.
+  </div>
+<% else %>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+    <% books.each do |book| %>
+      <%= link_to book_path(book.slug), class: "card card-hover p-0 overflow-hidden block" do %>
+        <div class="aspect-square bg-surface-alt flex items-center justify-center">
+          <% if book.cover.attached? %>
+            <%= image_tag book.cover, class: "w-full h-full object-cover", alt: book.title %>
+          <% else %>
+            <span class="text-muted text-sm">no cover</span>
+          <% end %>
+        </div>
+        <div class="p-3">
+          <div class="font-bold text-heading text-sm truncate"><%= book.title %></div>
+          <div class="text-muted text-xs truncate"><%= book.author %></div>
+          <div class="text-2xs mt-1 <%= book.ready? ? 'text-primary' : (book.failed? ? 'text-danger' : 'text-muted') %>">
+            <%= book.ready? ? "ready · #{format_hms(book.audio_duration_seconds)}" : book.status %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

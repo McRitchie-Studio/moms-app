@@ -1,23 +1,19 @@
 <% content_for :title, "Moms App" %>
 
-<div class="max-w-3xl mx-auto text-center py-12">
-  <h1 class="text-4xl font-extrabold text-heading tracking-tight mb-3">
-    Welcome to <span class="text-primary">Moms App</span>
-  </h1>
-  <p class="text-secondary text-lg mb-8">
-    A cozy place to collect, keep, and play the things that matter.
-  </p>
-
-  <div class="card p-8 text-left">
-    <h2 class="text-xl font-bold text-heading mb-2">Your audiobook library</h2>
-    <p class="text-body mb-6">
-      Digest a public-domain audiobook — cover, metadata, and its chapters
-      stitched into one file you can play right here.
-    </p>
-    <div class="flex flex-wrap gap-3">
-      <%= link_to "Open your Library", books_path, class: "btn btn-primary" %>
-      <%= link_to "Mom's photos", slideshow_path, class: "btn btn-secondary" %>
-      <%= link_to "Sign in", login_path, class: "btn btn-outline" %>
-    </div>
+<%# Slideshow first %>
+<section class="mb-12">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-2xl font-extrabold text-heading">Mom's <span class="text-primary">Photos</span></h2>
+    <%= link_to "Open slideshow →", slideshow_path, class: "text-muted hover:text-primary text-sm" %>
   </div>
-</div>
+  <%= render "slideshow/carousel" %>
+</section>
+
+<%# Library second %>
+<section>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-2xl font-extrabold text-heading">The <span class="text-primary">Library</span></h2>
+    <%= link_to "Digest a book", new_book_path, class: "btn btn-primary btn-sm" %>
+  </div>
+  <%= render "books/grid", books: @books %>
+</section>

@@ -1,12 +1,13 @@
 require "test_helper"
 
 class HomeSmokeTest < ActionDispatch::IntegrationTest
-  test "root renders the public home page with the engine navbar" do
+  test "root shows the slideshow first, then the library" do
     get root_path
     assert_response :success
-    assert_select "header"            # engine base navbar
-    assert_select ".card"             # home content card (engine component class)
-    assert_select "h1", /Moms App/    # branded heading
+    assert_select "header"                            # engine base navbar
+    assert_select "[x-data*=?]", "karenSlideshow"     # slideshow carousel
+    assert_select "img[src*=?]", "karen/karen", minimum: 1
+    assert_select "h2", text: /Library/               # library section below
   end
 
   test "login page renders the passwordless sign-in form" do
