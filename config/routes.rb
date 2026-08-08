@@ -12,5 +12,8 @@ Rails.application.routes.draw do
   # Audiobook library
   resources :books, only: %i[index show new create]
 
+  # Family photo slideshow (consolidated from karen_mcritchie)
+  get "slideshow", to: "slideshow#index"
+
   # App-specific routes go below.
 end
