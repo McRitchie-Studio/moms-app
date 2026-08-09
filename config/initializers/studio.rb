@@ -5,7 +5,7 @@ Studio.configure do |config|
 
   # Passwordless: magic-link email + Google OAuth. No password, no wallet.
   config.auth_methods = %i[magic_link google]
-  config.registration_params = [:name, :email]
+  config.registration_params = [ :name, :email ]
   config.magic_link_token_name = "magic_link_moms_app_v1"
 
   config.mailer_from = Studio.mailer_from_for_transport(
@@ -18,7 +18,7 @@ Studio.configure do |config|
   config.theme_logos = [
     { file: "favicon.png", title: "Favicon" },
     { file: "logo.png",    title: "Navbar Logo" },
-    { file: "logo.png",    title: "Auth Logo" },
+    { file: "logo.png",    title: "Auth Logo" }
   ]
 
   # Warm pink brand.
