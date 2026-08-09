@@ -20,7 +20,7 @@ gem "stimulus-rails"
 gem "jbuilder"
 
 # Studio engine — shared passwordless auth, theme, error logging, UI components
-gem "studio-engine", "~> 0.29"
+gem "studio-engine", "~> 0.30" # 0.30.0 makes the dev/QA environment banner a shared standard: the layout renders studio/banners/environment and nothing else — the partial self-gates (hidden in real production, shown on QA via QA_ENV), owns the label, and links the Local Inbox only where /_studio/local_emails actually resolves. This app's layout depends on that self-gating, so 0.30 is the FLOOR.
 
 # Tailwind CSS (the engine ships its component classes as v4 utilities)
 gem "tailwindcss-rails", "~> 4.5"
