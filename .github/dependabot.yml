@@ -5,25 +5,6 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
-  ignore:
-  # HOLD, not a fix. Lift it in /tasks/adopt-short-links-moms, in the same PR
-  # that installs the table.
-  #
-  # This app's Gemfile says `gem "studio-engine", "~> 0.29"`. Below 1.0 a
-  # two-segment `~>` is a FLOOR, not a ceiling — it means >= 0.29, < 1.0 — so
-  # that line already admits 0.31.0, which is live on RubyGems now.
-  #
-  # 0.31.0 deleted the stateless :signed magic-link store and made the
-  # Studio::Link row store the only one. This app has no studio_links table and
-  # sets no magic_link_store, so the first sign-in after a bump raises
-  # Studio::Link::MissingTable. That error names the fix, which makes the
-  # failure readable — not survivable.
-  #
-  # Why an ignore rather than trusting review to catch it: this is a live public
-  # site (karenmcritchie.com), it is NOT in studio-engine's consumer-CI matrix,
-  # and `main` CI is currently red — so a bump that broke sign-in would produce
-  # a red CI indistinguishable from today's. There is no signal to catch.
-  - dependency-name: studio-engine
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
