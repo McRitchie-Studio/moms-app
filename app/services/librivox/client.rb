@@ -16,7 +16,7 @@ module Librivox
 
     ARCHIVE_META = "https://archive.org/metadata/%s".freeze
     DOWNLOAD     = "https://archive.org/download/%s/%s".freeze
-    MP3_FORMATS  = ["128Kbps MP3", "VBR MP3", "64Kbps MP3"].freeze
+    MP3_FORMATS  = [ "128Kbps MP3", "VBR MP3", "64Kbps MP3" ].freeze
     USER_AGENT   = "moms-app/0.1 (local audiobook library)".freeze
 
     def self.build

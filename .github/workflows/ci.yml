@@ -86,7 +86,11 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+        # ffmpeg is an APP dependency, not a test convenience: BookStitcher shells
+        # out to it to concatenate chapters (app/services/book_stitcher.rb), and
+        # book_stitcher_test exercises that real path. Without it here the test
+        # lane fails on fixture generation and reads like a code defect.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips ffmpeg
 
       - name: Checkout code
         uses: actions/checkout@v6
@@ -125,7 +129,10 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips
+        # Kept in step with the test job so the two runners match. ffmpeg is an
+        # APP dependency (BookStitcher shells out to it), though the system lane
+        # itself does not exercise that path — book_stitcher_test runs in `test`.
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips ffmpeg
 
       - name: Checkout code
         uses: actions/checkout@v6
