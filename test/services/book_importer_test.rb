@@ -13,7 +13,7 @@ class BookImporterTest < ActiveSupport::TestCase
     assert_equal "Mark F. Smith", book.narrator
     assert_equal "digesting", book.status
     assert_equal 3, book.chapters.count
-    assert_equal [1, 2], book.included_chapters.map(&:position)
+    assert_equal [ 1, 2 ], book.included_chapters.map(&:position)
     assert_equal "A Scandal in Bohemia", book.chapters.first.title
   end
 
@@ -23,11 +23,11 @@ class BookImporterTest < ActiveSupport::TestCase
 
     assert_equal b1.id, b2.id
     assert_equal 3, b2.chapters.count
-    assert_equal [1, 2], b2.included_chapters.map(&:position)
+    assert_equal [ 1, 2 ], b2.included_chapters.map(&:position)
   end
 
   test "a nil limit marks every chapter as included (whole book)" do
     book = importer.import("sherlock", limit: nil)
-    assert_equal [1, 2, 3], book.included_chapters.map(&:position)
+    assert_equal [ 1, 2, 3 ], book.included_chapters.map(&:position)
   end
 end

@@ -36,7 +36,7 @@ class Book < ApplicationRecord
     included_chapters.map do |ch|
       start = offset
       offset += ch.duration_seconds.to_f
-      [ch, start.round]
+      [ ch, start.round ]
     end
   end
 end

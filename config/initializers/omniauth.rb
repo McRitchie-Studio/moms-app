@@ -8,4 +8,4 @@ end
 
 # Keep OmniAuth's request phase POST-only (CSRF-protected). Custom Google
 # entrypoints must POST to /auth/google_oauth2, never GET-redirect.
-OmniAuth.config.allowed_request_methods = [:post]
+OmniAuth.config.allowed_request_methods = [ :post ]

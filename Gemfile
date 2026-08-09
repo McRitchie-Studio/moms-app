@@ -26,7 +26,7 @@ gem "studio-engine", "~> 0.29"
 gem "tailwindcss-rails", "~> 4.5"
 
 # Environment variables in development/test
-gem "dotenv-rails", groups: [:development, :test]
+gem "dotenv-rails", groups: [ :development, :test ]
 
 # Google OAuth sign-in
 gem "omniauth"
