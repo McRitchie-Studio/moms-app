@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_08_230855) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_09_220940) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -108,6 +108,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_08_230855) do
     t.index ["email_key"], name: "index_studio_email_deliveries_on_email_key"
     t.index ["sent"], name: "index_studio_email_deliveries_on_sent"
     t.index ["user_id"], name: "index_studio_email_deliveries_on_user_id"
+  end
+
+  create_table "studio_enumerals", force: :cascade do |t|
+    t.string "category", null: false
+    t.string "color"
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.string "label"
+    t.jsonb "metadata", default: {}, null: false
+    t.integer "position", default: 0, null: false
+    t.integer "rank"
+    t.datetime "updated_at", null: false
+    t.index ["category", "key"], name: "index_studio_enumerals_on_category_and_key", unique: true
+    t.index ["category", "position"], name: "index_studio_enumerals_on_category_and_position"
+    t.index ["category", "rank"], name: "index_studio_enumerals_on_category_and_rank"
+  end
+
+  create_table "studio_links", force: :cascade do |t|
+    t.datetime "consumed_at"
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.string "kind", null: false
+    t.bigint "linkable_id"
+    t.string "linkable_type"
+    t.jsonb "metadata", default: {}, null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["kind"], name: "index_studio_links_on_kind"
+    t.index ["linkable_type", "linkable_id", "kind"], name: "idx_studio_links_owner_kind"
+    t.index ["token"], name: "index_studio_links_on_token", unique: true
   end
 
   create_table "theme_settings", force: :cascade do |t|

@@ -6,7 +6,10 @@ Studio.configure do |config|
   # Passwordless: magic-link email + Google OAuth. No password, no wallet.
   config.auth_methods = %i[magic_link google]
   config.registration_params = [ :name, :email ]
-  config.magic_link_token_name = "magic_link_moms_app_v1"
+  # No magic_link_token_name: it keyed the MessageVerifier purpose for the
+  # :signed store, which studio-engine 0.31 retired. Magic links are
+  # Studio::Link rows served at the short /l/<token>, and the store is no longer
+  # configurable — do NOT add config.magic_link_store, which now raises.
 
   config.mailer_from = Studio.mailer_from_for_transport(
     ses_from: "Moms App <team@mcritchie.studio>"
