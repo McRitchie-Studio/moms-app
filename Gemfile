@@ -20,7 +20,7 @@ gem "stimulus-rails"
 gem "jbuilder"
 
 # Studio engine — shared passwordless auth, theme, error logging, UI components
-gem "studio-engine", "~> 0.31" # 0.31 is the floor: it retired the stateless :signed magic-link store, so magic links are Studio::Link rows served at the short /l/<token> and the studio_links table is REQUIRED (installed via `bin/rails studio_engine:install:migrations`). Without it the first sign-in raises Studio::Link::MissingTable. 0.30 remains a floor for the shared dev/QA environment banner: the layout renders studio/banners/environment and nothing else — the partial self-gates (hidden in real production, shown on QA via QA_ENV), owns the label, and links the Local Inbox only where /_studio/local_emails actually resolves.
+gem "studio-engine", "~> 0.39" # 0.31 is the floor: it retired the stateless :signed magic-link store, so magic links are Studio::Link rows served at the short /l/<token> and the studio_links table is REQUIRED (installed via `bin/rails studio_engine:install:migrations`). Without it the first sign-in raises Studio::Link::MissingTable. 0.30 remains a floor for the shared dev/QA environment banner: the layout renders studio/banners/environment and nothing else — the partial self-gates (hidden in real production, shown on QA via QA_ENV), owns the label, and links the Local Inbox only where /_studio/local_emails actually resolves.
 
 # Tailwind CSS (the engine ships its component classes as v4 utilities)
 gem "tailwindcss-rails", "~> 4.5"
