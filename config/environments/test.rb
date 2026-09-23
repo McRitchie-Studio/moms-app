@@ -42,6 +42,10 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
+  # Cap the local log file so it rotates instead of growing without bound; see
+  # the note in development.rb. A whole test run fits well inside 8 MB.
+  config.log_file_size = 8 * 1024 * 1024
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 
