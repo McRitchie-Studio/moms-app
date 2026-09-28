@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_09_220940) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_28_205711) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -110,6 +110,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_220940) do
     t.index ["user_id"], name: "index_studio_email_deliveries_on_user_id"
   end
 
+  create_table "studio_email_settings", force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.string "cta_color"
+    t.boolean "cta_enabled"
+    t.string "cta_text"
+    t.string "discord_url"
+    t.string "email_key", null: false
+    t.string "header"
+    t.string "header_fallback"
+    t.boolean "hide_logo", default: false, null: false
+    t.string "logo_url"
+    t.integer "scrim_percent"
+    t.string "subject"
+    t.string "subtext"
+    t.datetime "updated_at", null: false
+    t.index ["email_key"], name: "index_studio_email_settings_on_email_key", unique: true
+  end
+
   create_table "studio_enumerals", force: :cascade do |t|
     t.string "category", null: false
     t.string "color"
@@ -123,6 +142,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_220940) do
     t.index ["category", "key"], name: "index_studio_enumerals_on_category_and_key", unique: true
     t.index ["category", "position"], name: "index_studio_enumerals_on_category_and_position"
     t.index ["category", "rank"], name: "index_studio_enumerals_on_category_and_rank"
+  end
+
+  create_table "studio_geo_settings", force: :cascade do |t|
+    t.string "app_name", null: false
+    t.jsonb "banned_countries", default: []
+    t.jsonb "banned_subdivisions", default: []
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: false, null: false
+    t.string "slug"
+    t.datetime "updated_at", null: false
+    t.index ["app_name"], name: "index_studio_geo_settings_on_app_name", unique: true
+    t.index ["slug"], name: "index_studio_geo_settings_on_slug", unique: true
+  end
+
+  create_table "studio_knowledge_docs", force: :cascade do |t|
+    t.jsonb "access", default: {}, null: false
+    t.bigint "byte_size"
+    t.string "category"
+    t.datetime "created_at", null: false
+    t.date "document_date"
+    t.string "entity", null: false
+    t.bigint "expectation_id"
+    t.string "mime_type"
+    t.string "path", default: "", null: false
+    t.string "s3_key"
+    t.string "source_note"
+    t.string "status", default: "inbox", null: false
+    t.text "summary"
+    t.bigint "superseded_by_id"
+    t.jsonb "tags", default: [], null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "uploaded_by"
+    t.index ["entity", "path"], name: "index_studio_knowledge_docs_on_entity_and_path"
+    t.index ["entity", "status"], name: "index_studio_knowledge_docs_on_entity_and_status"
+    t.index ["expectation_id"], name: "index_studio_knowledge_docs_on_expectation_id"
+    t.index ["s3_key"], name: "index_studio_knowledge_docs_on_s3_key", unique: true
+    t.index ["superseded_by_id"], name: "index_studio_knowledge_docs_on_superseded_by_id"
+  end
+
+  create_table "studio_knowledge_expectations", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "cadence", default: "once", null: false
+    t.string "category"
+    t.datetime "created_at", null: false
+    t.string "entity", null: false
+    t.string "path", default: "", null: false
+    t.string "source_note"
+    t.date "start_on"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["entity", "active"], name: "index_studio_knowledge_expectations_on_entity_and_active"
   end
 
   create_table "studio_links", force: :cascade do |t|
@@ -155,8 +226,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_09_220940) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.integer "birth_day"
+    t.integer "birth_month"
+    t.integer "birth_year"
     t.datetime "created_at", null: false
     t.string "email"
+    t.string "first_name"
+    t.jsonb "ip_locations", default: [], null: false
     t.string "name"
     t.string "provider"
     t.string "role", default: "viewer"
