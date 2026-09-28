@@ -67,7 +67,7 @@ reusing the app the domain already pointed at.
 
 | | |
 |---|---|
-| Heroku app | `obscure-plains-6405` · stack `heroku-24` · Basic web dyno |
+| Heroku app | `moms-app` · stack `heroku-24` · Basic web dyno |
 | Add-on | `heroku-postgresql:essential-0` (a single database) |
 | Buildpack | `heroku/ruby` (ffmpeg deferred — see follow-ups) |
 | Storage | ActiveStorage → S3 bucket `moms-app-production` (`us-east-2`); moving to Cloudflare R2 by `ACTIVE_STORAGE_BACKEND` stages (`config/initializers/00_storage_backend.rb`) |
