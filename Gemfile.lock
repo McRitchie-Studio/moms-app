@@ -533,7 +533,7 @@ DEPENDENCIES
   solid_cache
   solid_queue
   stimulus-rails
-  studio-engine (~> 0.31)
+  studio-engine (~> 0.77)
   tailwindcss-rails (~> 4.5)
   thruster
   turbo-rails
