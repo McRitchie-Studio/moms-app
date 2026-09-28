@@ -6,12 +6,61 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
-amazon:
+# THE MOVE TO CLOUDFLARE R2. `amazon` is the name every blob row records, so it
+# keeps that name and ACTIVE_STORAGE_BACKEND decides what it resolves to (stages
+# and rationale: config/initializers/00_storage_backend.rb):
+#   s3            the S3 service, exactly as before (the default)
+#   mirror_to_r2  S3 primary, every write mirrored to R2
+#   mirror_to_s3  R2 primary, every write mirrored back to S3
+#   r2            R2 alone
+<% stage = StorageBackend.active_storage_stage %>
+<% bucket = ENV.fetch("S3_BUCKET", "moms-app-production") %>
+amazon_s3:
   service: S3
   access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
   secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
   region: <%= ENV.fetch("AWS_REGION", "us-east-2") %>
-  bucket: <%= ENV.fetch("S3_BUCKET", "moms-app-production") %>
+  bucket: <%= bucket %>
+
+<% if stage != "s3" %>
+r2:
+  service: S3
+  endpoint: <%= StorageBackend.require!(ENV, "R2_ENDPOINT") %>
+  access_key_id: <%= StorageBackend.require!(ENV, "R2_ACCESS_KEY_ID") %>
+  secret_access_key: <%= StorageBackend.require!(ENV, "R2_SECRET_ACCESS_KEY") %>
+  region: auto
+  bucket: <%= bucket %>
+  # Required on R2: Active Storage sends Content-MD5, aws-sdk-s3 >= 1.178 adds a
+  # CRC32 by default, and R2 refuses a request carrying both ("You can only
+  # specify one non-default checksum at a time", measured 2026-09-28).
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
+<% end %>
+
+amazon:
+<% if stage == "s3" %>
+  service: S3
+  access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
+  secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
+  region: <%= ENV.fetch("AWS_REGION", "us-east-2") %>
+  bucket: <%= bucket %>
+<% elsif stage == "r2" %>
+  service: S3
+  endpoint: <%= StorageBackend.require!(ENV, "R2_ENDPOINT") %>
+  access_key_id: <%= StorageBackend.require!(ENV, "R2_ACCESS_KEY_ID") %>
+  secret_access_key: <%= StorageBackend.require!(ENV, "R2_SECRET_ACCESS_KEY") %>
+  region: auto
+  bucket: <%= bucket %>
+  # Required on R2: Active Storage sends Content-MD5, aws-sdk-s3 >= 1.178 adds a
+  # CRC32 by default, and R2 refuses a request carrying both ("You can only
+  # specify one non-default checksum at a time", measured 2026-09-28).
+  request_checksum_calculation: when_required
+  response_checksum_validation: when_required
+<% else %>
+  service: Mirror
+  primary: <%= stage == "mirror_to_r2" ? "amazon_s3" : "r2" %>
+  mirrors: [<%= stage == "mirror_to_r2" ? "r2" : "amazon_s3" %>]
+<% end %>
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:
