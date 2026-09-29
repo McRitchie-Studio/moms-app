@@ -2,8 +2,10 @@ name: CI
 
 on:
   pull_request:
+  # accepted and release are shippable rungs of the release ladder: bin/release
+  # prepare refuses to promote a rung CI never builds (it cannot certify it).
   push:
-    branches: [ main ]
+    branches: [ main, release, accepted ]
 
 jobs:
   scan_ruby:

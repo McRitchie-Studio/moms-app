@@ -58,6 +58,28 @@ Rails.application.configure do
   # Highlight code that triggered redirect in logs.
   config.action_dispatch.verbose_redirect_logs = true
 
+  # Cap the local log file so it rotates instead of growing without bound.
+  # Rails' own default is 100 MB per environment, each keeping one rotated
+  # sibling, which is how ~400 MB of log accumulated per checkout in the one
+  # environment nobody watches. Measured LOOSE by the hub archive sweep.
+  #
+  # THIS APP DOES CARRY studio-engine, whose `studio.logger` initializer caps
+  # every consuming app — but only from 0.33.0, and the lock here resolves
+  # 0.32.1, so nothing is capped today. The engine bump is its own change and
+  # already has one: dependabot PR #28 (0.32.1 -> 0.74.11) moves 18 gems, which
+  # does not belong in a local-disk chore. These literals match the engine's
+  # DEVELOPMENT_MAX_BYTES / TEST_MAX_BYTES, and the engine initializer runs
+  # AFTER environment files, so once that bump lands it simply sets the same
+  # values and this block can go. Background: mcritchie-studio
+  # docs/agents/maintenance/kickoff-log-rotation.md.
+  #
+  # `log_file_size` is the knob Rails' own :initialize_logger reads when it
+  # builds the logger. Setting config.logger here instead would be a silent
+  # no-op: :initialize_logger is a BOOTSTRAP initializer and has already run by
+  # the time an engine or railtie initializer gets a turn. Environment files
+  # load before it, which is why this works here.
+  config.log_file_size = 16 * 1024 * 1024
+
   # Suppress logger output for asset requests.
   config.assets.quiet = true
 

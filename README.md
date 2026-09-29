@@ -67,15 +67,20 @@ reusing the app the domain already pointed at.
 
 | | |
 |---|---|
-| Heroku app | `obscure-plains-6405` · stack `heroku-24` · Basic web dyno |
+| Heroku app | `moms-app` · stack `heroku-24` · Basic web dyno |
 | Add-on | `heroku-postgresql:essential-0` (a single database) |
 | Buildpack | `heroku/ruby` (ffmpeg deferred — see follow-ups) |
-| Storage | ActiveStorage → S3 bucket `moms-app-production` (`us-east-2`) |
+| Storage | ActiveStorage → S3 bucket `moms-app-production` (`us-east-2`); moving to Cloudflare R2 by `ACTIVE_STORAGE_BACKEND` stages (`config/initializers/00_storage_backend.rb`) |
 | Domain / SSL | name.com CNAMEs (apex + `www`) → the app's `*.herokudns.com` targets; Heroku ACM cert |
 
 **Config vars (Heroku):** `RAILS_MASTER_KEY`, `AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY`, `AWS_REGION=us-east-2`, `S3_BUCKET=moms-app-production`, and
 `DATABASE_URL` (set by the add-on). AWS creds come from 1Password (`agent.aws`).
+The R2 move adds `ACTIVE_STORAGE_BACKEND` (`s3` default → `mirror_to_r2` →
+`mirror_to_s3` → `r2`) and, for any stage but `s3`, `R2_ENDPOINT`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (1Password `r2.moms-app`). Boot raises if
+a non-`s3` stage lacks them, so unset `ACTIVE_STORAGE_BACKEND` in the same
+`config:unset` as any `R2_*` var.
 
 **Production config** (`config/environments/production.rb`, `config/database.yml`):
 one Postgres for everything — `database.yml` defines `cache`/`queue`/`cable` all

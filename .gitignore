@@ -39,3 +39,4 @@
 
 # Local dotenv (holds secrets) — not committed
 /.env
+.worktrees/
