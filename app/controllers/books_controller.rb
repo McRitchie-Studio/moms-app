@@ -1,6 +1,9 @@
 class BooksController < ApplicationController
-  # Public family site — no sign-in required to browse or listen.
-  skip_before_action :require_authentication
+  # Public family site: anyone may browse and listen. Importing a book is not
+  # public: `create` downloads a whole LibriVox book and stitches its audio into
+  # storage in the background, so only an admin may reach the form or submit it.
+  skip_before_action :require_authentication, only: %i[index show]
+  before_action :require_admin, only: %i[new create]
 
   def index
     @books = Book.order(created_at: :desc)
