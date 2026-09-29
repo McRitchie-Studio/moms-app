@@ -9,7 +9,7 @@ class BooksFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "the library and home are public, and hide every digest link from visitors" do
-    [books_path, root_path].each do |path|
+    [ books_path, root_path ].each do |path|
       get path
       assert_response :success
       assert_select "a[href=?]", new_book_path, count: 0
