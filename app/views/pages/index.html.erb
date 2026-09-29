@@ -13,7 +13,9 @@
 <section>
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-2xl font-extrabold text-heading">The <span class="text-primary">Library</span></h2>
-    <%= link_to "Digest a book", new_book_path, class: "btn btn-primary btn-sm" %>
+    <% if admin? %>
+      <%= link_to "Digest a book", new_book_path, class: "btn btn-primary btn-sm" %>
+    <% end %>
   </div>
   <%= render "books/grid", books: @books %>
 </section>

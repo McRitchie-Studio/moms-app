@@ -8,10 +8,12 @@ class BooksFlowTest < ActionDispatch::IntegrationTest
     user
   end
 
-  test "the library is public, and hides the digest button from visitors" do
-    get books_path
-    assert_response :success
-    assert_select "a[href=?]", new_book_path, count: 0
+  test "the library and home are public, and hide every digest link from visitors" do
+    [books_path, root_path].each do |path|
+      get path
+      assert_response :success
+      assert_select "a[href=?]", new_book_path, count: 0
+    end
   end
 
   # Importing is not public: create downloads a whole book and stitches its audio
