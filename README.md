@@ -47,7 +47,7 @@ SEED_CHAPTER_LIMIT=2 bin/rails db:seed
 
 ## Digest another book
 
-Go to `/books/new` and paste any Internet Archive identifier for a LibriVox
+Sign in as an admin, go to `/books/new`, and paste any Internet Archive identifier for a LibriVox
 recording (e.g. `adventures_sherlockholmes_1007_librivox`). Leave the chapter count
 blank for the whole book, or set a number to stitch just the first N chapters.
 
@@ -106,4 +106,5 @@ to S3). The one-off script used for the first deploy is in the git history.
   huge dependency tree (~10-min builds), so it was dropped for `heroku/ruby` only.
   Playback of already-stitched audio is fine; digesting a *new* book on the live site
   won't stitch until a lean ffmpeg buildpack is added (the `Aptfile` is ready for it).
-- **The `Digest a book` form is public** — re-gate it if that matters.
+- **Only an admin can digest a book.** Browsing and listening are public; `/books/new`
+  and `POST /books` sit behind `require_admin`.

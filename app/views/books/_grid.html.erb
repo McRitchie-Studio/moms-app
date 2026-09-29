@@ -1,7 +1,7 @@
 <%# Library grid — shared by /books and the root dashboard. Local: books. %>
 <% if books.empty? %>
   <div class="empty-state">
-    No books yet. <%= link_to "Digest your first one", new_book_path, class: "text-primary underline" %>.
+    No books yet.<% if admin? %> <%= link_to "Digest your first one", new_book_path, class: "text-primary underline" %>.<% end %>
   </div>
 <% else %>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
