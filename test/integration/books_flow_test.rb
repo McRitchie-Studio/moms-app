@@ -1,9 +1,48 @@
 require "test_helper"
 
 class BooksFlowTest < ActionDispatch::IntegrationTest
-  test "library index and the digest form render (public)" do
+  def sign_in_as(role)
+    user = User.create!(email: "#{role}@example.com", name: role.capitalize, role: role)
+    post link_consume_path(token: Studio::Link.create_magic_link(email: user.email).token)
+    assert_equal user.id, session[Studio.session_key]
+    user
+  end
+
+  test "the library is public, and hides the digest button from visitors" do
     get books_path
     assert_response :success
+    assert_select "a[href=?]", new_book_path, count: 0
+  end
+
+  # Importing is not public: create downloads a whole book and stitches its audio
+  # into storage in the background (found in review 2026-09-28).
+  test "an anonymous visitor cannot reach the digest form or import a book" do
+    get new_book_path
+    assert_redirected_to login_path
+
+    assert_no_difference -> { Book.count } do
+      post books_path, params: { identifier: "anything" }
+    end
+    assert_redirected_to login_path
+  end
+
+  test "a signed-in non-admin cannot import a book" do
+    sign_in_as("viewer")
+
+    get new_book_path
+    assert_redirected_to root_path
+
+    assert_no_difference -> { Book.count } do
+      post books_path, params: { identifier: "anything" }
+    end
+    assert_redirected_to root_path
+  end
+
+  test "an admin sees the digest button and the form" do
+    sign_in_as("admin")
+
+    get books_path
+    assert_select "a[href=?]", new_book_path
 
     get new_book_path
     assert_response :success

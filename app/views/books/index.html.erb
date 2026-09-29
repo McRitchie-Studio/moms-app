@@ -2,7 +2,9 @@
 
 <div class="flex items-center justify-between mb-6">
   <h1 class="text-3xl font-extrabold text-heading">Your <span class="text-primary">Library</span></h1>
-  <%= link_to "Digest a book", new_book_path, class: "btn btn-primary" %>
+  <% if admin? %>
+    <%= link_to "Digest a book", new_book_path, class: "btn btn-primary" %>
+  <% end %>
 </div>
 
 <%= render "books/grid", books: @books %>
