@@ -8,6 +8,17 @@ class BooksFlowTest < ActionDispatch::IntegrationTest
     user
   end
 
+  # BookImporter.new answers an importer whose import raises `error`, for the
+  # block only (minitest 6 ships no stub).
+  def with_importer_raising(error)
+    importer = Object.new
+    importer.define_singleton_method(:import) { |*, **| raise error }
+    BookImporter.define_singleton_method(:new) { |*| importer }
+    yield
+  ensure
+    BookImporter.singleton_class.remove_method(:new)
+  end
+
   test "the library and home are public, and hide every digest link from visitors" do
     [ books_path, root_path ].each do |path|
       get path
@@ -40,15 +51,40 @@ class BooksFlowTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "an admin sees the digest button and the form" do
+  test "an admin sees the digest button on home and in the library, and the form" do
     sign_in_as("admin")
 
-    get books_path
-    assert_select "a[href=?]", new_book_path
+    [ root_path, books_path ].each do |path|
+      get path
+      assert_select "a[href=?]", new_book_path, { text: "Digest a book" }, "digest button on #{path}"
+    end
 
     get new_book_path
     assert_response :success
     assert_select "form"
+  end
+
+  test "a failed import is logged for the admin and answered with a redirect" do
+    sign_in_as("admin")
+    with_importer_raising(IOError.new("archive.org timed out")) do
+      assert_difference -> { ErrorLog.count }, 1 do
+        post books_path, params: { identifier: "slow-book" }
+      end
+    end
+    assert_redirected_to new_book_path
+    assert_equal "Something went wrong importing that book.", flash[:alert]
+    assert_match "archive.org timed out", ErrorLog.last.message
+  end
+
+  test "a book LibriVox does not have is answered, not logged" do
+    sign_in_as("admin")
+    with_importer_raising(Librivox::Client::NotFound.new("no such identifier")) do
+      assert_no_difference -> { ErrorLog.count } do
+        post books_path, params: { identifier: "typo" }
+      end
+    end
+    assert_redirected_to new_book_path
+    assert_match "Couldn't find that book", flash[:alert]
   end
 
   test "a ready book shows the player and chapter seek buttons" do
