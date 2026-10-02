@@ -63,6 +63,17 @@ class StorageBackendTest < ActiveSupport::TestCase
     assert_equal "r2-sentinel-id", service.client.client.config.credentials.access_key_id
   end
 
+  # A QA app boots RAILS_ENV=production; QA_ENV is what keeps it off production.
+  test "QA_ENV resolves moms-app-dev on every stage, even with S3_BUCKET naming production" do
+    %w[s3 mirror_to_r2 mirror_to_s3 r2].each do |stage|
+      with_env(R2_ENV.merge("ACTIVE_STORAGE_BACKEND" => stage, "QA_ENV" => "true", "S3_BUCKET" => "moms-app-production")) do
+        configs = ActiveSupport::ConfigurationFile.parse(Rails.root.join("config/storage.yml"))
+        buckets = configs.values.filter_map { |c| c["bucket"] }.uniq
+        assert_equal [ "moms-app-dev" ], buckets, "stage #{stage}"
+      end
+    end
+  end
+
   # Active Storage sends Content-MD5 and aws-sdk-s3 >= 1.178 adds a CRC32 by
   # default; R2 refuses a request carrying both (measured 2026-09-28).
   test "every R2 service computes checksums only when required" do
