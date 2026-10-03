@@ -26,4 +26,39 @@ Studio.configure do |config|
 
   # Warm pink brand.
   config.theme_primary = "#E86AA6"
+
+  # ---- Site footer (studio-engine >= 0.84, docs/SITE_FOOTER.md) ----
+  # The engine's footer, rendered by `studio_site_footer` at the end of the
+  # application layout. Every app carries it, family sites included.
+  #
+  # A family site, so the footer says only what the site already says in public:
+  # NO address, NO map, NO phone, NO scheduler, by the operator's instruction
+  # (2026-10-03). Without `address:` the engine renders no Location band and
+  # never requests Leaflet or a map tile.
+  #
+  # No `email:` and no `social:` either: the site shows no contact address and no
+  # profile handle anywhere today. No `legal:` line: the site publishes no terms
+  # or privacy pages (that decision is the operator's, not the footer's).
+  #
+  # The logo is the engine default, the navbar's logo.png (a 64px mark).
+  # test/integration/site_footer_test.rb pins the links and the absences.
+  config.site_footer = ->(view) {
+    {
+      name: "Moms App",
+      wordmark: %w[Moms App],
+      home_path: view.root_path,
+      tagline: "Mom's photos and a little library of public-domain audiobooks.",
+      # The navbar's links, plus Home. One column: the site has three pages.
+      columns: [
+        [ "Explore", [ [ "Home", view.root_path ],
+                       [ "Photos", view.slideshow_path ],
+                       [ "Library", view.books_path ] ] ]
+      ]
+    }
+  }
+
+  # A visitor sees the footer on every page (the engine default). A signed-in
+  # admin sees it on the public pages too, and not on the engine's working
+  # surfaces (error logs, theme, admin), which stay full height.
+  config.site_footer_controllers = %w[pages books slideshow]
 end

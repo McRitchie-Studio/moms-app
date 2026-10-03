@@ -18,5 +18,9 @@
       <%= render "layouts/studio/flash" %>
       <%= yield %>
     </div>
+
+    <%# The engine's site footer (studio-engine >= 0.84): facts in
+        config/initializers/studio.rb; the engine decides where it shows. %>
+    <%= studio_site_footer %>
   </body>
 </html>
