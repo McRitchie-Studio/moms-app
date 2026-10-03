@@ -57,6 +57,10 @@ blank for the whole book, or set a number to stitch just the first N chapters.
 - `BookImporter` creates the `Book` + `Chapter` records and attaches the cover.
 - `BookStitcher` downloads the included chapters and concatenates them with `ffmpeg`.
 - `StitchBookJob` runs the stitch in the background from the web form.
+- Every public page ends with the studio-engine site footer (engine ≥ 0.84,
+  `studio_site_footer` in the layout). Its facts live in
+  `config/initializers/studio.rb`: wordmark, logo, tagline and the navbar's links,
+  with no address, map, phone, email, social profiles or legal line.
 
 Only public-domain works are supported by design.
 
