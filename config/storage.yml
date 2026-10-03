@@ -14,7 +14,12 @@ local:
 #   mirror_to_s3  R2 primary, every write mirrored back to S3
 #   r2            R2 alone
 <% stage = StorageBackend.active_storage_stage %>
-<% bucket = ENV.fetch("S3_BUCKET", "moms-app-production") %>
+<%# A QA app (QA_ENV, read via Studio.qa_environment? exactly as the other fleet apps
+    and Studio::S3 do) boots RAILS_ENV=production, so the bucket cannot key off
+    Rails.env: without this branch a QA app would read, write and DELETE the
+    production bucket. QA wins over S3_BUCKET on purpose. Measured in Carl's
+    storage audit, 2026-09-30. %>
+<% bucket = Studio.qa_environment? ? "moms-app-dev" : ENV.fetch("S3_BUCKET", "moms-app-production") %>
 amazon_s3:
   service: S3
   access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
