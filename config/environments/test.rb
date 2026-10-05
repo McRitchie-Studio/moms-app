@@ -54,4 +54,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # ClosedSignup holds every magic-link answer to a minimum duration so a
+  # member's cannot be told from a stranger's by the clock. Off here, so the suite
+  # does not sleep; test/integration/closed_signup_test.rb turns it on to test it.
+  config.x.closed_signup.response_floor = 0
 end

@@ -16,6 +16,9 @@ class LocalEmailCaptureTest < ActionDispatch::IntegrationTest
   end
 
   test "a magic link request records an outbox delivery row" do
+    # A member: signup is closed, so an unknown address is mailed nothing.
+    User.create!(email: "capture@example.com", name: "Capture")
+
     assert_difference "Studio::EmailDelivery.count", 1 do
       post magic_link_request_path, params: { email: "capture@example.com" }
     end
