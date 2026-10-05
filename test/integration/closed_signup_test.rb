@@ -1,0 +1,285 @@
+require "test_helper"
+
+# [integration] Public signup is closed (app/controllers/concerns/closed_signup.rb).
+#
+# Every door through which studio-engine makes an account is driven here twice,
+# through this app's real router: once as a STRANGER, who must leave no User row
+# behind, and once as a MEMBER, who must sign in as before. The stranger half is
+# the task; the member half is what keeps the gate from being a wall.
+#
+# Each stranger test was watched failing with its gate removed (see the task's
+# checks); `the doors really do create accounts when the gate is off` keeps that
+# control inside the suite for the door where it matters most.
+class ClosedSignupTest < ActionDispatch::IntegrationTest
+  MEMBER   = "mom@example.com"
+  STRANGER = "stranger@example.com"
+
+  setup do
+    @member = User.create!(email: MEMBER, name: "Mom")
+    OmniAuth.config.test_mode = true
+  end
+
+  teardown do
+    OmniAuth.config.mock_auth[:google_oauth2] = nil
+    OmniAuth.config.test_mode = false
+  end
+
+  # ---- /signup ---------------------------------------------------------------
+
+  test "GET /signup offers no form: it sends the visitor to sign-in" do
+    get "/signup"
+
+    assert_redirected_to "/login"
+    follow_redirect!
+    assert_response :success
+    assert_select "form[action='/signup']", false
+  end
+
+  test "POST /signup creates nothing, mints nothing and mails nothing" do
+    assert_nothing_made do
+      post "/signup", params: { user: { name: "Stranger", email: STRANGER } }
+    end
+
+    assert_redirected_to "/login"
+  end
+
+  test "POST /signup is closed to a member's address too: it is not a sign-in door" do
+    assert_nothing_made { post "/signup", params: { user: { email: MEMBER } } }
+  end
+
+  # ---- POST /magic_link ------------------------------------------------------
+
+  test "a magic-link request for an unknown address mints and mails nothing" do
+    assert_nothing_made { post magic_link_request_path, params: { email: STRANGER } }
+  end
+
+  test "a magic-link request for a member still mints and mails one link" do
+    assert_difference -> { Studio::Link.magic_links.count } => 1, -> { Studio::EmailDelivery.count } => 1 do
+      post magic_link_request_path, params: { email: MEMBER }
+    end
+
+    assert_equal MEMBER, Studio::Link.magic_links.order(:id).last.email
+  end
+
+  test "a member is recognized however the address is typed" do
+    assert_difference -> { Studio::Link.magic_links.count }, 1 do
+      post magic_link_request_path, params: { email: "  Mom@Example.COM " }
+    end
+  end
+
+  # No account enumeration: whatever a visitor can read back must be the same
+  # for an address with an account and one without.
+  test "the response to an unknown address is indistinguishable from a member's" do
+    # Frozen so the page's own issued-at stamp is not the one difference found.
+    known, unknown = freeze_time { [ magic_link_response(MEMBER), magic_link_response(STRANGER) ] }
+
+    assert_equal known, unknown
+    assert_equal 302, known[:status]
+    assert_match(/check your inbox/i, known[:flash]["notice"], "the comparison must be of a real answer")
+    assert_match(/check your inbox/i, known[:landing], "and the page it lands on must carry it")
+  end
+
+  test "the JSON response to an unknown address is indistinguishable too" do
+    known   = magic_link_response(MEMBER, as: :json)
+    unknown = magic_link_response(STRANGER, as: :json)
+
+    assert_equal known, unknown
+    assert_equal({ "success" => true }, JSON.parse(known[:body]))
+  end
+
+  # ---- POST /l/<token> -------------------------------------------------------
+
+  # A link for a stranger can no longer be requested, but one minted before the
+  # gate shipped (or by hand) must not become an account on click.
+  test "clicking a link for an unknown address creates no account and no session" do
+    link = Studio::Link.create_magic_link(email: STRANGER)
+
+    assert_no_difference -> { User.count } do
+      post link_consume_path(token: link.token)
+    end
+
+    assert_redirected_to "/login"
+    assert_equal ClosedSignup::MESSAGE, flash[:alert]
+    assert_nil session[Studio.session_key]
+    refute_nil link.reload.consumed_at, "the token still burns: it cannot be replayed"
+  end
+
+  test "a member signs in by magic link exactly as before" do
+    post magic_link_request_path, params: { email: MEMBER }
+    link = Studio::Link.magic_links.order(:id).last
+
+    assert_no_difference -> { User.count } do
+      post link_consume_path(token: link.token)
+    end
+
+    assert_equal @member.id, session[Studio.session_key]
+    assert_redirected_to "/"
+  end
+
+  # ---- Google ----------------------------------------------------------------
+
+  test "an unknown Google account is refused with a plain message and creates nothing" do
+    mock_google(email: STRANGER, uid: "g-stranger")
+
+    assert_no_difference -> { User.count } do
+      post "/auth/google_oauth2"
+      follow_redirect!
+    end
+
+    assert_redirected_to "/login"
+    assert_equal ClosedSignup::MESSAGE, flash[:alert]
+    assert_nil session[Studio.session_key]
+    follow_redirect!
+    assert_includes response.body, "private family site"
+  end
+
+  test "a member signs in with Google by address, and the Google id is linked" do
+    mock_google(email: MEMBER, uid: "g-mom")
+
+    assert_no_difference -> { User.count } do
+      post "/auth/google_oauth2"
+      follow_redirect!
+    end
+
+    assert_equal @member.id, session[Studio.session_key]
+    assert_redirected_to "/"
+    assert_equal %w[google_oauth2 g-mom], @member.reload.values_at(:provider, :uid)
+  end
+
+  test "a member signs in with an already linked Google id" do
+    @member.update!(provider: "google_oauth2", uid: "g-mom")
+    mock_google(email: "renamed@example.com", uid: "g-mom")
+
+    assert_no_difference -> { User.count } do
+      post "/auth/google_oauth2"
+      follow_redirect!
+    end
+
+    assert_equal @member.id, session[Studio.session_key]
+  end
+
+  # ---- SSO -------------------------------------------------------------------
+
+  # Shared-cookie SSO is off for this app, so the hub's session keys are planted
+  # by hand: this is the session a visitor WOULD carry if it were ever turned on.
+  test "an SSO session for an unknown address creates no account" do
+    plant_session("sso_email" => STRANGER, "sso_name" => "Stranger", "sso_source" => "McRitchie Studio")
+
+    assert_no_difference -> { User.count } do
+      post "/sso_continue"
+    end
+
+    assert_redirected_to "/login"
+    assert_equal ClosedSignup::MESSAGE, flash[:alert]
+    assert_nil session[Studio.session_key]
+  end
+
+  test "an SSO session for a member still continues" do
+    plant_session("sso_email" => MEMBER, "sso_name" => "Mom", "sso_source" => "McRitchie Studio")
+
+    assert_no_difference -> { User.count } do
+      post "/sso_continue"
+    end
+
+    assert_equal @member.id, session[Studio.session_key]
+  end
+
+  test "POST /sso_continue with no SSO session is the engine's quiet redirect" do
+    post "/sso_continue"
+
+    assert_redirected_to "/login"
+    assert_nil flash[:alert]
+  end
+
+  # ---- No way in is advertised -----------------------------------------------
+
+  test "no page links to /signup, and the sign-in page says what the site is" do
+    %w[/ /login /books /slideshow].each do |path|
+      get path
+
+      assert_response :success, path
+      assert_select "a[href*='signup']", false, "#{path} must not link to /signup"
+      assert_select "form[action*='signup']", false, "#{path} must not post to /signup"
+      assert_no_match(/sign\s*up/i, response.body, "#{path} must not invite a sign-up")
+    end
+
+    get "/login"
+    assert_select "[data-members-only]", text: /private family site/
+  end
+
+  test "the footer carries no link to /signup" do
+    get "/"
+
+    assert_select "footer a", minimum: 1
+    assert_select "footer a[href*='signup']", false
+  end
+
+  test "the sign-in page still offers both methods" do
+    get "/login"
+
+    assert_select "form[action='#{magic_link_request_path}'] input[name='email']"
+    assert_select "form[action='/auth/google_oauth2'][method='post']"
+  end
+
+  # ---- Control ---------------------------------------------------------------
+
+  # The gate is what closes the door, not something else about this app or this
+  # test: with the engine's own hook restored, the same click makes an account.
+  test "control: without the gate, the same click creates an account" do
+    link = Studio::Link.create_magic_link(email: STRANGER)
+    gate = ClosedSignup::LinkClick.instance_method(:sign_up_new)
+    ClosedSignup::LinkClick.send(:remove_method, :sign_up_new)
+
+    begin
+      assert_difference -> { User.count }, 1 do
+        post link_consume_path(token: link.token)
+      end
+    ensure
+      ClosedSignup::LinkClick.send(:define_method, :sign_up_new, gate)
+      ClosedSignup::LinkClick.send(:private, :sign_up_new)
+    end
+  end
+
+  private
+
+  def assert_nothing_made(&block)
+    assert_no_difference [ -> { User.count }, -> { Studio::Link.count }, -> { Studio::EmailDelivery.count } ], &block
+  end
+
+  def mock_google(email:, uid:)
+    OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
+      provider: "google_oauth2", uid: uid, info: { email: email, name: "Google User" }
+    )
+  end
+
+  # Everything a visitor can read from one fresh-session request: the redirect,
+  # the flash, the body, the headers that are not per-request noise, and the page
+  # the redirect lands on.
+  def magic_link_response(email, as: nil)
+    reset!
+    post magic_link_request_path, params: { email: email }, as: as
+
+    seen = {
+      status:  response.status,
+      location: response.location,
+      flash:   flash.to_h,
+      body:    response.body,
+      headers: response.headers.to_h.except("x-request-id", "x-runtime", "set-cookie", "etag"),
+      cookies: response.cookies.keys.sort
+    }
+    return seen if as == :json
+
+    follow_redirect!
+    seen.merge(landing: response.body.gsub(/(authenticity_token" value=|csrf-token" content=)"[^"]*"/, "\\1\"\""))
+  end
+
+  # Start the next request with this session. The cookie is encrypted with the
+  # app's own key, the same way the session store writes it.
+  def plant_session(data)
+    key = Rails.application.config.session_options[:key]
+    request = ActionDispatch::Request.new(Rails.application.env_config.merge("HTTP_HOST" => host))
+    jar = request.cookie_jar
+    jar.encrypted[key] = { value: data.merge("session_id" => SecureRandom.hex(16)) }
+    cookies[key] = jar[key]
+  end
+end
