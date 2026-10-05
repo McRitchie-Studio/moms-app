@@ -14,6 +14,10 @@ require "test_helper"
 class MagicLinkFlowTest < ActionDispatch::IntegrationTest
   EMAIL = "reader@example.com"
 
+  # Public signup is closed (test/integration/closed_signup_test.rb), so a link
+  # is only ever requested for, and only ever signs in, someone with an account.
+  setup { @reader = User.create!(email: EMAIL, name: "Reader") }
+
   # The operator-visible half: what actually arrives in the email is SHORT.
   test "requesting a link mints a short /l/<token> URL" do
     assert_difference -> { Studio::Link.magic_links.count }, 1 do
@@ -47,9 +51,8 @@ class MagicLinkFlowTest < ActionDispatch::IntegrationTest
 
     post link_consume_path(token: link.token)
 
-    user = User.find_by(email: EMAIL)
-    refute_nil user, "create-or-login makes the account on first click"
-    assert_equal user.id, session[Studio.session_key]
+    assert_equal @reader.id, session[Studio.session_key]
+    assert_equal 1, User.where(email: EMAIL).count, "the click signs a member in; it makes no account"
     refute_nil link.reload.consumed_at, "a single-use token must burn"
   end
 

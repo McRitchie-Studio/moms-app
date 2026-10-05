@@ -5,8 +5,9 @@ Internet Archive / LibriVox into a tidy record — cover, metadata, and its chap
 stitched into one file — then play it in the browser with chapter-jump markers.
 
 Built as a Studio-engine satellite. It also hosts a family **photo slideshow**, and
-runs as a **fully public** site (no sign-in) — live at
-[karenmcritchie.com](https://karenmcritchie.com).
+runs as a **public** site (nothing to read or play needs a sign-in) — live at
+[karenmcritchie.com](https://karenmcritchie.com). Accounts are for family only:
+**public signup is closed** (see [Accounts](#accounts)).
 
 ## Stack
 
@@ -27,9 +28,29 @@ bin/rails server -p 3600
 
 Requirements: PostgreSQL running locally and `ffmpeg` on your PATH (`brew install ffmpeg`).
 
-Open http://localhost:3600 — the site is **fully public**, so no sign-in is needed to
-browse the photos or play the audiobooks. (The engine's auth machinery is present but
-unused.)
+Open http://localhost:3600 — no sign-in is needed to browse the photos or play the
+audiobooks. Signing in (`/login`, by emailed link or Google) is for the family
+accounts that already exist; only an admin can digest a book.
+
+## Accounts
+
+Nobody can create their own account. `/signup` redirects to `/login`; a sign-in link
+is mailed only to an address that already has an account (an unknown address gets the
+same "check your inbox" answer and no email); an unknown Google account is refused.
+studio-engine has no setting for this, so the gate lives in this app:
+`app/controllers/concerns/closed_signup.rb`, pinned by
+`test/integration/closed_signup_test.rb`.
+
+**Adding a family member** is the operator's job, from the console. There is no
+invite page:
+
+```bash
+heroku run --app moms-app -- bin/rails runner \
+  'User.create!(email: "mom@example.com", name: "Mom")'   # add role: "admin" for an admin
+```
+
+They then sign in at `/login` with that address, by emailed link or with the Google
+account that owns it. `bin/rails db:seed` creates the first admin the same way.
 
 ## The demo
 
@@ -66,7 +87,7 @@ Only public-domain works are supported by design.
 
 ## Deployment (production)
 
-Live at **https://karenmcritchie.com** — a fully public family site on Heroku,
+Live at **https://karenmcritchie.com** — a public family site (signup closed) on Heroku,
 reusing the app the domain already pointed at.
 
 | | |

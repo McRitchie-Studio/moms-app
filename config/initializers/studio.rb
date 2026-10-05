@@ -4,6 +4,10 @@ Studio.configure do |config|
   config.welcome_message = ->(user) { "Welcome to Moms App, #{user.display_name}!" }
 
   # Passwordless: magic-link email + Google OAuth. No password, no wallet.
+  #
+  # These are SIGN-IN methods only. Public signup is closed: the engine has no
+  # setting for that, so app/controllers/concerns/closed_signup.rb gates every
+  # engine flow that would create an account (README, "Accounts").
   config.auth_methods = %i[magic_link google]
   config.registration_params = [ :name, :email ]
   # No magic_link_token_name: it keyed the MessageVerifier purpose for the
@@ -15,7 +19,8 @@ Studio.configure do |config|
     ses_from: "Moms App <team@mcritchie.studio>"
   )
 
-  # New SSO users start as viewers.
+  # New SSO users start as viewers. Unreached today: shared-cookie SSO is off
+  # (session_store.rb) and ClosedSignup refuses an SSO visitor with no account.
   config.configure_sso_user = ->(user) { user.role = "viewer" }
 
   config.theme_logos = [
@@ -39,6 +44,8 @@ Studio.configure do |config|
   # No `email:` and no `social:` either: the site shows no contact address and no
   # profile handle anywhere today. No `legal:` line: the site publishes no terms
   # or privacy pages (that decision is the operator's, not the footer's).
+  # The operator's decision (2026-10-05): close public signup rather than
+  # publish them (app/controllers/concerns/closed_signup.rb).
   #
   # The logo is the engine default, the navbar's logo.png (a 64px mark).
   # test/integration/site_footer_test.rb pins the links and the absences.
