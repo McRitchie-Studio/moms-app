@@ -36,7 +36,8 @@ accounts that already exist; only an admin can digest a book.
 
 Nobody can create their own account. `/signup` redirects to `/login`; a sign-in link
 is mailed only to an address that already has an account (an unknown address gets the
-same "check your inbox" answer and no email); an unknown Google account is refused.
+same "check your inbox" answer, in the same time, and no email); an unknown Google
+account is refused.
 studio-engine has no setting for this, so the gate lives in this app:
 `app/controllers/concerns/closed_signup.rb`, pinned by
 `test/integration/closed_signup_test.rb`.

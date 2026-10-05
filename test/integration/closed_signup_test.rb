@@ -87,6 +87,22 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
     assert_equal({ "success" => true }, JSON.parse(known[:body]))
   end
 
+  # The clock is part of the response. A stranger's request does almost no work,
+  # so without the floor it returns in a few milliseconds and a member's does not.
+  test "a stranger's request is held to the same floor as a member's" do
+    with_response_floor(0.25) do
+      assert_operator seconds { post magic_link_request_path, params: { email: STRANGER } }, :>=, 0.25
+      assert_operator seconds { post magic_link_request_path, params: { email: MEMBER } }, :>=, 0.25
+    end
+
+    assert_operator seconds { post magic_link_request_path, params: { email: STRANGER } }, :<, 0.25,
+                    "control: with the floor off the stranger's answer is fast, so the floor is what held it"
+  end
+
+  test "the floor is on outside the test environment" do
+    with_response_floor(nil) { assert_equal 0.4, ClosedSignup.response_floor }
+  end
+
   # ---- POST /l/<token> -------------------------------------------------------
 
   # A link for a stranger can no longer be requested, but one minted before the
@@ -244,6 +260,21 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
 
   def assert_nothing_made(&block)
     assert_no_difference [ -> { User.count }, -> { Studio::Link.count }, -> { Studio::EmailDelivery.count } ], &block
+  end
+
+  def seconds
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+    Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+  end
+
+  def with_response_floor(value)
+    config = Rails.configuration.x.closed_signup
+    before = config.response_floor
+    config.response_floor = value
+    yield
+  ensure
+    config.response_floor = before
   end
 
   def mock_google(email:, uid:)

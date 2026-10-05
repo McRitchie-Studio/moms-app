@@ -28,16 +28,32 @@ module ClosedSignup
   MESSAGE = "This is a private family site, so new accounts are closed. " \
             "If you are family, ask to be added."
 
+  # How long a magic-link request takes at the least, in seconds. A member's
+  # request does more work than a stranger's (two inserts and a job, against one
+  # lookup), and the gap is readable from outside: 118 ms against 75 ms at the
+  # median over 20 requests each on a development desk, before this floor. Both
+  # answers are held to the same floor so the clock says nothing either. Zero in
+  # the test environment (config/environments/test.rb).
+  DEFAULT_RESPONSE_FLOOR = 0.4
+
+  def self.response_floor
+    Rails.configuration.x.closed_signup.response_floor || DEFAULT_RESPONSE_FLOOR
+  end
+
   # POST /magic_link. The engine already answers a malformed address with its
   # ordinary "Check your inbox" response while minting and mailing nothing. A
   # stranger's address is handed to it as exactly that, so the response a
   # stranger sees is the engine's own, not a copy of it that could drift: same
   # status, same redirect, same flash, same JSON. Nothing in it says whether the
-  # address belongs to a member.
+  # address belongs to a member, and neither does how long it took.
   module MagicLinkRequest
     def create
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       params[:email] = "" unless User.member_email?(params[:email])
       super
+    ensure
+      remaining = ClosedSignup.response_floor - (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
+      sleep(remaining) if remaining.positive?
     end
   end
 
