@@ -1,0 +1,67 @@
+<%# Moms App's sign-in page (overrides studio-engine's sessions/new).
+
+    Why a host copy: the engine's page ends with an unconditional "Don't have an
+    account? Sign up" link to /signup, and public signup is closed here
+    (app/controllers/concerns/closed_signup.rb). The engine has no switch for
+    that line, so this page carries the same two sign-in methods the engine
+    renders for this app's auth_methods, magic link and Google, and replaces the
+    line with one that says what the site is.
+
+    Left out because this app has neither: the password form and the hub SSO
+    "Continue as" card. Adding either method means adding its form back here.
+    test/integration/closed_signup_test.rb pins both forms and the absent link. %>
+<%
+  logo_path = Studio.logo_for("Auth Logo")
+  words = Studio.app_name.split
+  last_word = words.pop
+  prefix = words.join(" ")
+  sign_in_label = Studio.sign_in_label
+%>
+
+<div class="min-h-[70vh] flex items-center justify-center">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <% if logo_path %>
+        <img src="<%= logo_path %>" alt="<%= Studio.app_name %>" class="w-20 h-20 rounded-full shadow-lg mx-auto mb-4">
+      <% end %>
+      <h1 class="text-3xl font-extrabold text-heading tracking-tight"><%= prefix %> <span class="text-primary"><%= last_word %></span></h1>
+      <p class="text-secondary mt-2"><%= Studio::AuthLabels.prompt(sign_in_label) %></p>
+    </div>
+
+    <div class="card p-8 shadow">
+      <% if Studio.auth_method?(:magic_link) %>
+        <%= form_tag magic_link_request_path, method: :post do %>
+          <div class="mb-5">
+            <label for="email" class="block text-sm text-secondary mb-2 font-medium">Email</label>
+            <input type="email" name="email" id="email" value="<%= params[:email] %>" autofocus
+              class="input-field"
+              placeholder="you@example.com">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">
+            Send <%= Studio::AuthLabels.link_noun(sign_in_label) %>
+          </button>
+        <% end %>
+      <% end %>
+
+      <% if Studio.auth_method?(:google) %>
+        <% if Studio.auth_method?(:magic_link) %>
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-subtle"></div></div>
+            <div class="relative flex justify-center text-sm"><span class="bg-surface px-3 text-secondary">or</span></div>
+          </div>
+        <% end %>
+
+        <%= button_to "/auth/google_oauth2", method: :post, data: { turbo: false },
+          class: "btn btn-google btn-lg w-full gap-3" do %>
+          <%= render "components/google_logo" %>
+          Sign in with Google
+        <% end %>
+      <% end %>
+
+      <p class="text-center text-secondary text-sm mt-6" data-signup-closed>
+        Moms App is a private family site. Sign-in is for family members.
+      </p>
+    </div>
+  </div>
+</div>
