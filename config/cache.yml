@@ -1,7 +1,15 @@
+# Solid Cache settings. Solid Cache backs one store: the magic-link rate-limit
+# counters (ClosedSignup::MagicLinkRequest::STORE). Rails.cache is a separate
+# store (config/environments/*.rb) and is not configured here.
+#
+# No `database:` key, so the table lives in the primary database
+# (db/migrate/*_create_solid_cache_entries.rb) and shares its connection pool:
+# every web process, dyno and deploy reads and writes the same rows.
 default: &default
   store_options:
-    # Cap age of oldest cache entry to fulfill retention policies
-    # max_age: <%= 60.days.to_i %>
+    # A counter's own expiry is its 15-minute window; a day is far beyond it, so
+    # trimming by age only clears rows for addresses that stopped asking.
+    max_age: <%= 1.day.to_i %>
     max_size: <%= 256.megabytes %>
     namespace: <%= Rails.env %>
 
@@ -12,5 +20,4 @@ test:
   <<: *default
 
 production:
-  database: cache
   <<: *default
