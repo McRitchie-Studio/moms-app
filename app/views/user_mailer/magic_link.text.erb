@@ -1,0 +1,12 @@
+<%# Moms App's copy of studio-engine's user_mailer/magic_link.text.erb. The
+    engine's first sentence promises "If you don't have an account yet, we'll
+    create one for you", and public signup is closed here
+    (app/controllers/concerns/closed_signup.rb). Everything else is the engine's. %>
+Open this link to sign in to <%= @app_name %>. No password needed:
+
+<%= @magic_url %>
+
+Open this link on this device to finish. It expires shortly and can only be
+used once. If you didn't request it, you can safely ignore this message.
+
+— <%= @app_name %>
