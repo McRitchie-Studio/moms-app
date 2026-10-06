@@ -10,7 +10,9 @@ default: &default
     # A counter's own expiry is its 15-minute window; a day is far beyond it, so
     # trimming by age only clears rows for addresses that stopped asking.
     max_age: <%= 1.day.to_i %>
-    max_size: <%= 256.megabytes %>
+    # A counter row is a few hundred bytes, so 16 MB holds tens of thousands of
+    # client addresses; past it, Solid Cache trims the oldest rows first.
+    max_size: <%= 16.megabytes %>
     namespace: <%= Rails.env %>
 
 development:
