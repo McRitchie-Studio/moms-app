@@ -6,7 +6,7 @@ Rails.application.config.to_prepare do
     MagicLinksController        => ClosedSignup::MagicLinkRequest,
     Studio::LinksController     => ClosedSignup::LinkClick,
     OmniauthCallbacksController => ClosedSignup::GoogleCallback,
-    SessionsController          => [ ClosedSignup::SsoContinue, ClosedSignup::PasswordLogin ]
+    SessionsController          => ClosedSignup::SsoContinue
   }.each do |controller, gates|
     Array(gates).each { |gate| controller.prepend(gate) unless controller < gate }
   end
