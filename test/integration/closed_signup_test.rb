@@ -105,32 +105,26 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
 
   # ---- POST /login: no passwords here, one answer for everyone ---------------
 
-  # studio-engine 0.90 and below draw POST /login for every app, and
-  # ClosedSignup::PasswordLogin answers it with one redirect. From 0.91 (engine
-  # PR 420) a passwordless app gets no route at all, so it is a 404. Either is a
-  # refusal that says nothing about who is a member; the test holds on both, so
-  # the engine bump does not have to land with a test edit.
-  test "POST /login answers a member and a stranger identically, and raises for neither" do
+  # studio-engine draws POST /login only for an app with :password in
+  # auth_methods (0.91, engine PR 420), and this app has none, so the route is
+  # undrawn: a 404 for everyone, and no code of this app or the engine reads the
+  # address. Adding :password would draw it again, and without a password column
+  # the engine action would answer a member with a 500 and a stranger with a 422.
+  test "POST /login is undrawn: a member and a stranger get the same 404, and nothing raises" do
+    assert_not login_route_drawn?, "POST /login is drawn; this app has no passwords (config/initializers/studio.rb auth_methods)"
+
     member_answer = stranger_answer = nil
     assert_no_difference -> { ErrorLog.count } do
       member_answer = login_response(MEMBER)
       stranger_answer = login_response(STRANGER)
     end
 
-    if login_route_drawn?
-      assert_equal member_answer, stranger_answer
-      assert_equal 303, member_answer[:status]
-      assert_equal "http://www.example.com/login", member_answer[:location]
-      assert_match(/emailed link or Google/, member_answer[:flash]["alert"])
-    else
-      # The test environment renders a 404 as Rails' debug page, whose object
-      # ids differ per request; production serves public/404.html to both. The
-      # route is undrawn, so no code of this app's or the engine's reads the
-      # address: everything else must match.
-      assert_equal member_answer.except(:body), stranger_answer.except(:body)
-      assert_equal 404, member_answer[:status]
-      assert_nil member_answer[:location]
-    end
+    # The test environment renders a 404 as Rails' debug page, whose object ids
+    # differ per request; production serves public/404.html to both. Everything
+    # else must match.
+    assert_equal member_answer.except(:body), stranger_answer.except(:body)
+    assert_equal 404, member_answer[:status]
+    assert_nil member_answer[:location]
   end
 
   test "POST /login signs nobody in, even with a member's address" do
@@ -190,6 +184,10 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
 
     assert_equal 2, SolidCache::Store.new.increment(key, 1, expires_in: 1.minute)
     assert_equal 2, ClosedSignup::MagicLinkRequest::STORE.read(key, raw: true).to_i
+  end
+
+  test "[unit] the rate-limit store caps its table at 16 MB" do
+    assert_equal 16.megabytes, ClosedSignup::MagicLinkRequest::STORE.max_size
   end
 
   test "the limit counts each client address on its own" do
@@ -394,7 +392,7 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
 
   private
 
-  # Whether the engine draws a password sign-in for this app (0.90: yes; 0.91: no).
+  # Whether the engine draws a password sign-in for this app (only with :password).
   def login_route_drawn?
     Rails.application.routes.recognize_path("/login", method: :post)
     true
