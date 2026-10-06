@@ -117,13 +117,17 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
       stranger_answer = login_response(STRANGER)
     end
 
-    assert_equal member_answer, stranger_answer
-
     if login_route_drawn?
+      assert_equal member_answer, stranger_answer
       assert_equal 303, member_answer[:status]
       assert_equal "http://www.example.com/login", member_answer[:location]
       assert_match(/emailed link or Google/, member_answer[:flash]["alert"])
     else
+      # The test environment renders a 404 as Rails' debug page, whose object
+      # ids differ per request; production serves public/404.html to both. The
+      # route is undrawn, so no code of this app's or the engine's reads the
+      # address: everything else must match.
+      assert_equal member_answer.except(:body), stranger_answer.except(:body)
       assert_equal 404, member_answer[:status]
       assert_nil member_answer[:location]
     end

@@ -111,8 +111,10 @@ a non-`s3` stage lacks them, so unset `ACTIVE_STORAGE_BACKEND` in the same
 **Production config** (`config/environments/production.rb`, `config/database.yml`):
 one Postgres for everything — `database.yml` defines `cache`/`queue`/`cable` all
 pointing at `DATABASE_URL` (the solid_* gem models eager-load and `connects_to` those
-keys), while the app uses `:memory_store` cache + `:async` jobs/cable, so no solid_*
-tables are needed. `force_ssl` + `assume_ssl` (Heroku terminates TLS) with a host
+keys), while the app uses `:memory_store` cache + `:async` jobs/cable. The one
+solid_* table is `solid_cache_entries`, in the primary schema: it holds the
+magic-link rate-limit counters (`ClosedSignup::MagicLinkRequest::STORE`,
+`config/cache.yml`), so every process and deploy counts against one limit. `force_ssl` + `assume_ssl` (Heroku terminates TLS) with a host
 allow-list for the domain.
 
 **Redeploy:**
