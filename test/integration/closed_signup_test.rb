@@ -103,6 +103,104 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
     with_response_floor(nil) { assert_equal 0.4, ClosedSignup.response_floor }
   end
 
+  # ---- POST /login: no passwords here, one answer for everyone ---------------
+
+  test "POST /login answers a member and a stranger identically, and raises for neither" do
+    member_answer = stranger_answer = nil
+    assert_no_difference -> { ErrorLog.count } do
+      member_answer = login_response(MEMBER)
+      stranger_answer = login_response(STRANGER)
+    end
+
+    assert_equal member_answer, stranger_answer
+    assert_equal 303, member_answer[:status]
+    assert_equal "http://www.example.com/login", member_answer[:location]
+    assert_match(/emailed link or Google/, member_answer[:flash]["alert"])
+  end
+
+  test "POST /login signs nobody in, even with a member's address" do
+    post login_path, params: { email: MEMBER, password: "anything" }
+    get root_path
+
+    assert_nil session[Studio.session_key]
+  end
+
+  # ---- POST /magic_link: rate limited per client ----------------------------
+
+  test "magic-link requests past the limit are refused, and the refusal mails nothing" do
+    ClosedSignup::MagicLinkRequest::LIMIT.times { post magic_link_request_path, params: { email: STRANGER } }
+
+    assert_no_difference [ -> { Studio::Link.count }, -> { Studio::EmailDelivery.count } ] do
+      post magic_link_request_path, params: { email: MEMBER }
+    end
+    assert_redirected_to login_path
+    assert_match(/Too many sign-in requests/, flash[:alert])
+
+    post magic_link_request_path, params: { email: MEMBER }, as: :json
+    assert_response :too_many_requests
+  end
+
+  test "the limit refuses a member's address and a stranger's alike" do
+    limit = ClosedSignup::MagicLinkRequest::LIMIT
+    limit.times { post magic_link_request_path, params: { email: MEMBER } }
+    post magic_link_request_path, params: { email: STRANGER }
+    stranger_refusal = [ response.status, response.location, flash[:alert] ]
+
+    ClosedSignup::MagicLinkRequest::STORE.clear
+    limit.times { post magic_link_request_path, params: { email: STRANGER } }
+    post magic_link_request_path, params: { email: MEMBER }
+
+    assert_equal stranger_refusal, [ response.status, response.location, flash[:alert] ]
+    assert_match(/Too many sign-in requests/, flash[:alert])
+  end
+
+  test "the limit counts each client address on its own" do
+    ClosedSignup::MagicLinkRequest::LIMIT.times do
+      post magic_link_request_path, params: { email: STRANGER }, headers: { "REMOTE_ADDR" => "198.51.100.1" }
+    end
+
+    assert_difference -> { Studio::Link.magic_links.count } => 1 do
+      post magic_link_request_path, params: { email: MEMBER }, headers: { "REMOTE_ADDR" => "198.51.100.2" }
+    end
+  end
+
+  # The Heroku router appends the address it saw to X-Forwarded-For and never
+  # sets Forwarded, so a client-written Forwarded header must not choose the
+  # address the limit counts (config/initializers/forwarded_headers.rb).
+  test "a client-written Forwarded header does not reset the limit" do
+    ClosedSignup::MagicLinkRequest::LIMIT.times do |i|
+      post magic_link_request_path, params: { email: STRANGER },
+                                    headers: heroku_headers.merge("Forwarded" => "for=203.0.113.#{i + 1}")
+    end
+
+    assert_no_difference -> { Studio::Link.count } do
+      post magic_link_request_path, params: { email: MEMBER },
+                                    headers: heroku_headers.merge("Forwarded" => "for=203.0.113.99")
+    end
+    assert_match(/Too many sign-in requests/, flash[:alert])
+  end
+
+  # ---- the sign-in email ----------------------------------------------------
+
+  test "the sign-in email no longer promises to create an account" do
+    mail = UserMailer.magic_link(MEMBER, "tok123").message
+    parts = mail.multipart? ? [ mail.text_part, mail.html_part ].compact : [ mail ]
+    text = parts.map { |part| part.body.decoded }.join("\n")
+
+    assert_includes text, "/l/tok123", "the mail did not render its link, so the copy check would prove nothing"
+    refute_match(/create one for you/i, text)
+    assert_match(/No password needed/i, text)
+  end
+
+  # The HTML body comes from the email catalog, not a view. An operator's saved
+  # wording on /admin/emails still wins over this default.
+  test "the email catalog's default body makes no account promise either" do
+    body = Studio::EmailCatalog.body(:magic_link)
+
+    refute_match(/create one for you/i, body)
+    assert_includes body, "No password needed"
+  end
+
   # ---- POST /l/<token> -------------------------------------------------------
 
   # A link for a stranger can no longer be requested, but one minted before the
@@ -257,6 +355,20 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  # What a fresh visitor reads from POST /login with this address.
+  def login_response(email)
+    reset!
+    post login_path, params: { email: email, password: "guess" }
+    { status: response.status, location: response.location, flash: flash.to_h,
+      body: response.body, cookies: response.cookies.keys.sort }
+  end
+
+  # A request in the shape the Heroku router forwards: the client's address on
+  # the right of X-Forwarded-For, behind a private router hop.
+  def heroku_headers
+    { "REMOTE_ADDR" => "10.1.2.3", "X-Forwarded-For" => "198.51.100.77" }
+  end
 
   def assert_nothing_made(&block)
     assert_no_difference [ -> { User.count }, -> { Studio::Link.count }, -> { Studio::EmailDelivery.count } ], &block

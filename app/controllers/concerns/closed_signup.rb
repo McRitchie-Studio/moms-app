@@ -17,6 +17,11 @@
 #   GET /auth/google_oauth2/callback       User.from_omniauth       GoogleCallback + User.from_omniauth
 #   POST /sso_continue, unknown sso_email  User.new + save!         SsoContinue
 #
+# Two more gates keep the CLOSED doors from saying who is a member:
+#
+#   POST /login (password form)            member 500, stranger 422 PasswordLogin
+#   POST /magic_link, many in a row        no limit                 MagicLinkRequest's rate_limit
+#
 # Not closed, on purpose: /_studio/local_review find-or-creates its reviewer, but
 # the engine draws it outside production only and answers loopback requests only.
 #
@@ -27,6 +32,10 @@
 module ClosedSignup
   MESSAGE = "This is a private family site, so new accounts are closed. " \
             "If you are family, ask to be added."
+
+  # The sign-in email's body (config/initializers/closed_signup.rb). The engine's
+  # default promises to create an account for a new address.
+  MAGIC_LINK_BODY = "Tap the button below to sign in to {app}. No password needed."
 
   # How long a magic-link request takes at the least, in seconds. A member's
   # request does more work than a stranger's (two inserts and a job, against one
@@ -47,6 +56,34 @@ module ClosedSignup
   # status, same redirect, same flash, same JSON. Nothing in it says whether the
   # address belongs to a member, and neither does how long it took.
   module MagicLinkRequest
+    # Requests per client address in WINDOW before the next is refused. A family
+    # member asks for a link once or twice; this stops a script from spending the
+    # mail quota or holding Puma threads on the response floor below.
+    LIMIT = 10
+    WINDOW = 15.minutes
+
+    # Its own store, not Rails.cache: the test environment's cache is a null
+    # store, which would count nothing, and the production cache is per dyno
+    # memory anyway. Counting is per process, so N dynos allow N times LIMIT.
+    STORE = ActiveSupport::Cache::MemoryStore.new
+
+    LIMITED_MESSAGE = "Too many sign-in requests from here. Please wait a few minutes and try again."
+
+    # Refused before the engine's action and before the response floor, and the
+    # same refusal whatever address was asked for, so it says nothing about who
+    # is a member. Keyed on request.remote_ip, which only the Heroku router can
+    # set (config/initializers/forwarded_headers.rb).
+    def self.prepended(controller)
+      controller.rate_limit to: LIMIT, within: WINDOW, only: :create, store: STORE,
+                            name: "closed_signup_magic_link",
+                            with: -> {
+                              respond_to do |format|
+                                format.json { render json: { error: LIMITED_MESSAGE }, status: :too_many_requests }
+                                format.html { redirect_to login_path, alert: LIMITED_MESSAGE }
+                              end
+                            }
+    end
+
     def create
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       params[:email] = "" unless User.member_email?(params[:email])
@@ -54,6 +91,19 @@ module ClosedSignup
     ensure
       remaining = ClosedSignup.response_floor - (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
       sleep(remaining) if remaining.positive?
+    end
+  end
+
+  # POST /login. The engine draws a password sign-in for every app, but this one
+  # has no passwords: User has no authenticate, so the engine's action answered a
+  # member with a 500 and an ErrorLog and a stranger with a 422, which told the
+  # two apart in one request. Nobody here signs in by password, so every request
+  # gets the same answer and no address is looked up at all.
+  module PasswordLogin
+    MESSAGE = "This site signs in with an emailed link or Google, not a password."
+
+    def create
+      redirect_to login_path, alert: MESSAGE, status: :see_other
     end
   end
 
