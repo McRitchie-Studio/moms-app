@@ -19,7 +19,8 @@
 #
 # Two more gates keep the CLOSED doors from saying who is a member:
 #
-#   POST /login (password form)            member 500, stranger 422 PasswordLogin
+#   POST /login (password form, engine     member 500, stranger 422 PasswordLogin
+#     0.90 and below; 0.91 draws none)
 #   POST /magic_link, many in a row        no limit                 MagicLinkRequest's rate_limit
 #
 # Not closed, on purpose: /_studio/local_review find-or-creates its reviewer, but
@@ -62,10 +63,19 @@ module ClosedSignup
     LIMIT = 10
     WINDOW = 15.minutes
 
-    # Its own store, not Rails.cache: the test environment's cache is a null
-    # store, which would count nothing, and the production cache is per dyno
-    # memory anyway. Counting is per process, so N dynos allow N times LIMIT.
-    STORE = ActiveSupport::Cache::MemoryStore.new
+    # Solid Cache in the primary database (config/cache.yml), in every
+    # environment, so the counters are rows every process reads: a second Puma
+    # worker or dyno counts against the same LIMIT, and a deploy or the daily
+    # dyno restart does not hand every client a fresh one. Its own store, not
+    # Rails.cache, which is a null store in test and per-process memory in
+    # production. Each increment locks its row, so concurrent requests from
+    # one address cannot both read the same count.
+    #
+    # Solid Cache answers a lost database with nil rather than raising, and
+    # Rails' rate_limit lets a nil count through: an outage opens the limit
+    # rather than closing sign-in, and the database being down closes sign-in
+    # anyway.
+    STORE = SolidCache::Store.new
 
     LIMITED_MESSAGE = "Too many sign-in requests from here. Please wait a few minutes and try again."
 
@@ -75,7 +85,7 @@ module ClosedSignup
     # set (config/initializers/forwarded_headers.rb).
     def self.prepended(controller)
       controller.rate_limit to: LIMIT, within: WINDOW, only: :create, store: STORE,
-                            name: "closed_signup_magic_link",
+                            name: "closed_signup_magic_link", scope: "closed_signup",
                             with: -> {
                               respond_to do |format|
                                 format.json { render json: { error: LIMITED_MESSAGE }, status: :too_many_requests }
@@ -94,11 +104,17 @@ module ClosedSignup
     end
   end
 
-  # POST /login. The engine draws a password sign-in for every app, but this one
-  # has no passwords: User has no authenticate, so the engine's action answered a
-  # member with a 500 and an ErrorLog and a stranger with a 422, which told the
-  # two apart in one request. Nobody here signs in by password, so every request
-  # gets the same answer and no address is looked up at all.
+  # POST /login. studio-engine up to 0.90 draws a password sign-in for every
+  # app, but this one has no passwords: User has no authenticate, so the
+  # engine's action answered a member with a 500 and an ErrorLog and a stranger
+  # with a 422, which told the two apart in one request. Nobody here signs in by
+  # password, so every request gets the same answer and no address is looked up.
+  #
+  # From studio-engine 0.91 (PR 420) the engine draws POST /login only for an
+  # app with :password in auth_methods, and this app has none, so the route 404s
+  # for everyone and this module is never reached. Delete it, and its line in
+  # config/initializers/closed_signup.rb, in the commit that bumps the engine to
+  # 0.91; test/integration/closed_signup_test.rb holds on either engine.
   module PasswordLogin
     MESSAGE = "This site signs in with an emailed link or Google, not a password."
 
