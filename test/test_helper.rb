@@ -12,9 +12,10 @@ module ActiveSupport
 
     # Add more helper methods to be used by all tests here...
 
-    # The magic-link rate limit counts in a process-wide store
-    # (ClosedSignup::MagicLinkRequest::STORE); start every test with none spent,
-    # so a test's requests never depend on how many ran before it.
+    # The magic-link rate limit counts in Solid Cache rows
+    # (ClosedSignup::MagicLinkRequest::STORE). A transactional test rolls them
+    # back anyway; clearing also covers one that is not, so a test's requests
+    # never depend on how many ran before it.
     setup { ClosedSignup::MagicLinkRequest::STORE.clear }
   end
 end

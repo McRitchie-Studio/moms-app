@@ -87,8 +87,10 @@ test:
 production:
   # One physical Heroku Postgres. The solid_* gems' models eager-load and
   # connects_to :cache/:queue/:cable, so those keys must resolve — they all
-  # point at the same DB. We don't actually use them (memory cache, async
-  # jobs + cable), so no separate solid_* tables are needed.
+  # point at the same DB. Solid Queue and Solid Cable are unused (async jobs +
+  # cable). Solid Cache backs only the magic-link rate limit, and its table is
+  # in the primary schema: config/cache.yml names no `database:`, so it uses
+  # the primary pool, not the `cache` key below.
   primary: &primary_prod
     <<: *default
     url: <%= ENV["DATABASE_URL"] %>
