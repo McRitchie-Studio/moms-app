@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_06_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_212806) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -89,6 +89,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_180000) do
     t.string "target_type"
     t.datetime "updated_at", null: false
     t.index ["slug"], name: "index_error_logs_on_slug", unique: true
+  end
+
+  create_table "image_caches", force: :cascade do |t|
+    t.integer "bytes"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.bigint "owner_id"
+    t.string "owner_type"
+    t.string "purpose", null: false
+    t.string "s3_key", null: false
+    t.string "source_url"
+    t.datetime "updated_at", null: false
+    t.string "variant", null: false
+    t.index ["owner_type", "owner_id", "purpose", "variant"], name: "idx_image_caches_owner_purpose_variant", unique: true
+    t.index ["owner_type", "owner_id"], name: "index_image_caches_on_owner"
+    t.index ["s3_key"], name: "index_image_caches_on_s3_key", unique: true
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
@@ -177,6 +193,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_180000) do
     t.bigint "expectation_id"
     t.string "mime_type"
     t.string "path", default: "", null: false
+    t.bigint "recording_byte_size"
+    t.string "recording_key"
+    t.string "recording_mime_type"
+    t.text "recording_source_url"
     t.string "s3_key"
     t.string "source_note"
     t.string "status", default: "inbox", null: false
@@ -189,6 +209,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_180000) do
     t.index ["entity", "path"], name: "index_studio_knowledge_docs_on_entity_and_path"
     t.index ["entity", "status"], name: "index_studio_knowledge_docs_on_entity_and_status"
     t.index ["expectation_id"], name: "index_studio_knowledge_docs_on_expectation_id"
+    t.index ["recording_key"], name: "index_studio_knowledge_docs_on_recording_key", unique: true
     t.index ["s3_key"], name: "index_studio_knowledge_docs_on_s3_key", unique: true
     t.index ["superseded_by_id"], name: "index_studio_knowledge_docs_on_superseded_by_id"
   end
@@ -262,6 +283,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_06_180000) do
     t.string "dark"
     t.string "light"
     t.string "primary"
+    t.string "slug"
     t.datetime "updated_at", null: false
     t.string "warning"
     t.index ["app_name"], name: "index_theme_settings_on_app_name", unique: true
