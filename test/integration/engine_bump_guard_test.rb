@@ -65,7 +65,29 @@ class EngineBumpGuardTest < ActiveSupport::TestCase
   # constraint — the constraint is a floor and says nothing about what is
   # actually installed, which is the whole trap this guard exists for.
   def locked_engine_version
-    line = Rails.root.join("Gemfile.lock").read[/^\s{4}studio-engine \(([\d.]+)\)/, 1]
+    engine_version_in(Rails.root.join("Gemfile.lock").read)
+  end
+
+  # Everything between the parentheses is the version, a prerelease included:
+  # while an engine release is under QA the hub locks this app to its release
+  # candidate (`studio-engine (0.96.0.rc1)`), and a digits-and-dots pattern read
+  # that line as no engine at all.
+  def engine_version_in(lockfile)
+    line = lockfile[/^\s{4}studio-engine \(([^()\s]+)\)$/, 1]
     line && Gem::Version.new(line)
+  end
+
+  public
+
+  test "a release candidate in the lockfile is read as the engine version" do
+    lock = "GEM\n  remote: https://rubygems.org/\n  specs:\n    studio-engine (%s)\n      rails (>= 7.1)\n"
+
+    assert_equal Gem::Version.new("0.96.0.rc1"), engine_version_in(format(lock, "0.96.0.rc1"))
+    assert_operator engine_version_in(format(lock, "0.96.0.rc1")), :>=, ROW_STORE_FLOOR,
+                    "a candidate past the floor still sends the guard to the table check"
+    # THE CONTROLS: a release reads as before, and a lock with no engine is still nil.
+    assert_equal Gem::Version.new("0.95.2"), engine_version_in(format(lock, "0.95.2"))
+    assert_nil engine_version_in("GEM\n  specs:\n    rails (8.0.2)\n")
+    assert_nil engine_version_in("DEPENDENCIES\n  studio-engine (~> 0.31)\n"), "the constraint line is not the resolution"
   end
 end
