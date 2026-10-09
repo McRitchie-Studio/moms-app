@@ -16,9 +16,8 @@ require "test_helper"
 # the app safe now that bumps flow again. It fails whether dependabot, a human,
 # or a bare `bundle update` crosses the line.
 #
-# Nothing else would catch it: this is a live public site, it is not in
-# studio-engine's consumer-CI matrix, and the failure would surface only when a
-# real person tried to sign in.
+# Nothing else in this suite would catch it: this is a live public site, and the
+# failure would surface only when a real person tried to sign in.
 class EngineBumpGuardTest < ActiveSupport::TestCase
   # The release that made studio_links mandatory.
   ROW_STORE_FLOOR = Gem::Version.new("0.31.0")

@@ -13,6 +13,27 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "?", User.new.avatar_initials
   end
 
+  # ---- [unit] A nameless member's slug -----------------------------------------
+  #
+  # name_slug reads the id, which does not exist when the slug is first written,
+  # so the insert carries the bare "user-". The engine's Sluggable settles it to
+  # user-<id> inside the create; this model has no hook of its own. The Gemfile
+  # floor (0.93) is the release that does it.
+
+  test "nameless user gets user id slug" do
+    user = User.create!(email: "nameless@example.com")
+
+    assert_equal "user-#{user.id}", user.reload.slug
+  end
+
+  test "two nameless members in a row both save" do
+    first = User.create!(email: "nameless-one@example.com")
+    second = User.create!(email: "nameless-two@example.com")
+
+    assert_equal [ "user-#{first.id}", "user-#{second.id}" ], [ first.reload.slug, second.reload.slug ],
+                 "a row left on the bare \"user-\" would make the unique slug index refuse the second"
+  end
+
   # ---- [unit] Membership: public signup is closed ---------------------------
 
   def google_auth(email:, uid:)
