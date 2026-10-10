@@ -4,8 +4,9 @@ class HomeSmokeTest < ActionDispatch::IntegrationTest
   test "root shows the slideshow first, then the library" do
     get root_path
     assert_response :success
-    assert_select "header"                            # engine base navbar
-    assert_select "[x-data*=?]", "karenSlideshow"     # slideshow carousel
+    assert_select "header[data-controller=scroll-shadow][data-action='scroll@window->scroll-shadow#update']" \
+                  "[data-scroll-shadow-scrolled-class='shadow-lg border-b border-subtle']", 1
+    assert_select "[data-controller=carousel]", 1     # slideshow carousel
     assert_select "img[src*=?]", "karen/karen", minimum: 1
     assert_select "h2", text: /Library/               # library section below
   end
