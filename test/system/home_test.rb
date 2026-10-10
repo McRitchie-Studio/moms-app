@@ -67,6 +67,25 @@ class HomeTest < ApplicationSystemTestCase
     assert_no_selector "header.border-b"
   end
 
+  # A reload or Back restores the scroll before the controller connects, and no
+  # scroll event follows.
+  test "a navbar that connects on a scrolled page takes its shadow" do
+    page.current_window.resize_to(500, 600)
+    visit root_path
+    page.execute_script("window.scrollTo(0, 200)")
+    assert_selector "header.shadow-lg"
+
+    page.execute_script(<<~JS)
+      const header = document.querySelector("header")
+      header.removeAttribute("data-controller")
+      header.classList.remove("shadow-lg", "border-b", "border-subtle")
+    JS
+    assert_no_selector "header.shadow-lg"
+
+    page.execute_script("document.querySelector('header').setAttribute('data-controller', 'scroll-shadow')")
+    assert_selector "header.shadow-lg.border-b.border-subtle"
+  end
+
   test "the public root renders both sections for a signed-out visitor" do
     visit root_path
 
