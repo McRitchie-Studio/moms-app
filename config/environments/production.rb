@@ -11,8 +11,9 @@ Rails.application.configure do
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
-  # Uploaded files — book covers + stitched audiobook audio — live in S3
-  # (Heroku dynos have an ephemeral filesystem). See config/storage.yml.
+  # Uploaded files — book covers + stitched audiobook audio — live in Cloudflare
+  # R2 (Heroku dynos have an ephemeral filesystem). The service keeps the name
+  # `amazon` because blob rows record it. See config/storage.yml.
   config.active_storage.service = :amazon
 
   # Heroku terminates TLS at the router and forwards over http with

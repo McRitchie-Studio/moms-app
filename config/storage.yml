@@ -6,66 +6,29 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
-# THE MOVE TO CLOUDFLARE R2. `amazon` is the name every blob row records, so it
-# keeps that name and ACTIVE_STORAGE_BACKEND decides what it resolves to (stages
-# and rationale: config/initializers/00_storage_backend.rb):
-#   s3            the S3 service, exactly as before (the default)
-#   mirror_to_r2  S3 primary, every write mirrored to R2
-#   mirror_to_s3  R2 primary, every write mirrored back to S3
-#   r2            R2 alone
-<% stage = StorageBackend.active_storage_stage %>
-<%# A QA app (QA_ENV, read via Studio.qa_environment? exactly as the other fleet apps
-    and Studio::S3 do) boots RAILS_ENV=production, so the bucket cannot key off
-    Rails.env: without this branch a QA app would read, write and DELETE the
-    production bucket. QA wins over S3_BUCKET on purpose. Measured in Carl's
-    storage audit, 2026-09-30. %>
-<% bucket = Studio.qa_environment? ? "moms-app-dev" : ENV.fetch("S3_BUCKET", "moms-app-production") %>
-amazon_s3:
-  service: S3
-  access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
-  secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
-  region: <%= ENV.fetch("AWS_REGION", "us-east-2") %>
-  bucket: <%= bucket %>
-
-<% if stage != "s3" %>
-r2:
-  service: S3
-  endpoint: <%= StorageBackend.require!(ENV, "R2_ENDPOINT") %>
-  access_key_id: <%= StorageBackend.require!(ENV, "R2_ACCESS_KEY_ID") %>
-  secret_access_key: <%= StorageBackend.require!(ENV, "R2_SECRET_ACCESS_KEY") %>
-  region: auto
-  bucket: <%= bucket %>
-  # Required on R2: Active Storage sends Content-MD5, aws-sdk-s3 >= 1.178 adds a
-  # CRC32 by default, and R2 refuses a request carrying both ("You can only
-  # specify one non-default checksum at a time", measured 2026-09-28).
-  request_checksum_calculation: when_required
-  response_checksum_validation: when_required
-<% end %>
-
+# ACTIVE STORAGE'S ONE CLOUD STORE: CLOUDFLARE R2. `amazon` is the name every
+# blob row records, so the service keeps that name; it has resolved to R2 alone
+# since 2026-10-03 and AWS S3 was retired on 2026-10-10. The rules it reads
+# (accepted ACTIVE_STORAGE_BACKEND values, which R2_* variables production must
+# hold, which bucket a process owns) live in
+# config/initializers/00_storage_backend.rb.
+<% StorageBackend.backend! %>
 amazon:
-<% if stage == "s3" %>
-  service: S3
-  access_key_id: <%= ENV["AWS_ACCESS_KEY_ID"] %>
-  secret_access_key: <%= ENV["AWS_SECRET_ACCESS_KEY"] %>
-  region: <%= ENV.fetch("AWS_REGION", "us-east-2") %>
-  bucket: <%= bucket %>
-<% elsif stage == "r2" %>
-  service: S3
-  endpoint: <%= StorageBackend.require!(ENV, "R2_ENDPOINT") %>
-  access_key_id: <%= StorageBackend.require!(ENV, "R2_ACCESS_KEY_ID") %>
-  secret_access_key: <%= StorageBackend.require!(ENV, "R2_SECRET_ACCESS_KEY") %>
+  # The engine's S3 service with a three-day grace period on delete: a purge
+  # COPIES the object to trash/<utc date>/<epoch ms>/<key> and only then deletes
+  # it (Studio::S3::Trash). R2 has no object versioning, so this is the undo;
+  # the bucket's lifecycle rule `expire-trash-3d` removes the copy later.
+  service: StudioTrashS3
+  endpoint: <%= StorageBackend.r2_setting("R2_ENDPOINT") %>
+  access_key_id: <%= StorageBackend.r2_setting("R2_ACCESS_KEY_ID") %>
+  secret_access_key: <%= StorageBackend.r2_setting("R2_SECRET_ACCESS_KEY") %>
   region: auto
-  bucket: <%= bucket %>
+  bucket: <%= StorageBackend.bucket %>
   # Required on R2: Active Storage sends Content-MD5, aws-sdk-s3 >= 1.178 adds a
   # CRC32 by default, and R2 refuses a request carrying both ("You can only
   # specify one non-default checksum at a time", measured 2026-09-28).
   request_checksum_calculation: when_required
   response_checksum_validation: when_required
-<% else %>
-  service: Mirror
-  primary: <%= stage == "mirror_to_r2" ? "amazon_s3" : "r2" %>
-  mirrors: [<%= stage == "mirror_to_r2" ? "r2" : "amazon_s3" %>]
-<% end %>
 
 # Remember not to checkin your GCS keyfile to a repository
 # google:
