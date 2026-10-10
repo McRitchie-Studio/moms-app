@@ -96,17 +96,23 @@ reusing the app the domain already pointed at.
 | Heroku app | `moms-app` · stack `heroku-24` · Basic web dyno |
 | Add-on | `heroku-postgresql:essential-0` (a single database) |
 | Buildpack | `heroku/ruby` (ffmpeg deferred — see follow-ups) |
-| Storage | ActiveStorage → S3 bucket `moms-app-production` (`us-east-2`); moving to Cloudflare R2 by `ACTIVE_STORAGE_BACKEND` stages (`config/initializers/00_storage_backend.rb`) |
+| Storage | Active Storage → Cloudflare R2 bucket `moms-app-production` in McRitchie Studio's Cloudflare account (the service is still named `amazon`, the name blob rows record). R2 only: AWS S3 was retired on 2026-10-10. A purged file is copied to `trash/` first and kept three days (`config/storage.yml`, `config/initializers/00_storage_backend.rb`) |
 | Domain / SSL | name.com CNAMEs (apex + `www`) → the app's `*.herokudns.com` targets; Heroku ACM cert |
 
-**Config vars (Heroku):** `RAILS_MASTER_KEY`, `AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY`, `AWS_REGION=us-east-2`, `S3_BUCKET=moms-app-production`, and
-`DATABASE_URL` (set by the add-on). AWS creds come from 1Password (`agent.aws`).
-The R2 move adds `ACTIVE_STORAGE_BACKEND` (`s3` default → `mirror_to_r2` →
-`mirror_to_s3` → `r2`) and, for any stage but `s3`, `R2_ENDPOINT`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (1Password `r2.moms-app`). Boot raises if
-a non-`s3` stage lacks them, so unset `ACTIVE_STORAGE_BACKEND` in the same
-`config:unset` as any `R2_*` var.
+**Config vars (Heroku):** `RAILS_MASTER_KEY`, `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY` (1Password `r2.moms-app`), and `DATABASE_URL` (set by the
+add-on). All three `R2_*` variables are required: a production boot without one
+raises, naming it. `ACTIVE_STORAGE_BACKEND` is optional and accepts only `r2`; any
+other value (the retired `s3`, `mirror_to_r2`, `mirror_to_s3`) raises at boot. A QA
+app (`QA_ENV=true`) stores on `moms-app-dev`. Development and test store on local
+disk and need none of these.
+
+**Deleted files** are recoverable for three days. The storage service is the
+engine's `StudioTrashS3`, so a purge copies the object to
+`trash/<utc date>/<epoch ms>/<key>` before deleting it, and the bucket's lifecycle
+rule `expire-trash-3d` removes the copy later. Put the bytes back with
+`SERVICE=amazon bin/rails "studio:trash:restore[<trash key>]"` (find the key with
+`SERVICE=amazon bin/rails studio:trash:list`); the blob row is not restored.
 
 **Production config** (`config/environments/production.rb`, `config/database.yml`):
 one Postgres for everything — `database.yml` defines `cache`/`queue`/`cable` all
@@ -125,9 +131,10 @@ git push heroku main   # build, then release-phase db:migrate
 
 **(Re)seeding the audiobook in prod:** the ~648 MB stitched MP3 is not re-stitched on a
 dyno. Populate by running the importer + attaching the already-stitched local file
-against the prod DB + S3 from your machine (`RAILS_ENV=production DATABASE_URL=<prod>`
-plus the S3 env vars): it imports metadata + cover, then attaches the audio (uploaded
-to S3). The one-off script used for the first deploy is in the git history.
+against the prod DB + R2 bucket from your machine (`RAILS_ENV=production
+DATABASE_URL=<prod>` plus the three `R2_*` variables): it imports metadata + cover,
+then attaches the audio (uploaded to R2). The one-off script used for the first deploy
+is in the git history.
 
 **Known follow-ups:**
 - **ffmpeg is not on the dyno.** The `heroku-community/apt` + `Aptfile` route pulls a
