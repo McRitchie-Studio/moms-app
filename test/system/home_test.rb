@@ -1,37 +1,70 @@
 require "application_system_test_case"
 
-# [system] The front door, in a real browser.
-#
-# CI has run a `system-test` job since the app was scaffolded, and the Gemfile
-# has carried capybara + selenium-webdriver the whole time — but `test/system`
-# and `application_system_test_case.rb` were never created, so the job died on
-# `cannot load such file -- test/system` without running anything. This is the
-# lane's first real content.
-#
-# These assertions are chosen to be ones the cheaper tiers CANNOT make.
-# `test/integration/home_smoke_test.rb` already asserts the server-rendered
-# markup and the `x-data="karenSlideshow()"` hook, so re-asserting markup here
-# would just duplicate it at many times the runtime. What only a browser proves
-# is that the JavaScript actually RUNS.
+# [system] The front door in a real browser: what only running JavaScript
+# proves. The markup hooks are asserted in test/integration.
 class HomeTest < ApplicationSystemTestCase
-  test "the carousel is genuinely interactive, not just wired in the markup" do
+  test "Next scrolls the carousel" do
     visit root_path
 
     assert_equal 0, track_scroll_left, "precondition: the track starts unscrolled"
 
-    # next() moves the track by scripting scrollLeft. Nothing in the server
-    # response can do that, so a passing assertion here proves Alpine actually
-    # booted and its handler ran — which is the only thing this tier can prove
-    # that the integration tier cannot.
-    #
-    # Deliberately NOT the Pause/Play text: the wrapper carries
-    # @mouseenter="stop()", so Capybara's click is preceded by a hover that
-    # already stopped the timer, and toggle() then restarts it — the label nets
-    # back to "Pause" and the assertion fails for a reason that has nothing to
-    # do with whether JS is alive.
     click_button "Next ›"
 
-    assert_scrolled
+    assert_track_scrolls
+  end
+
+  test "Prev from the start goes around to the end" do
+    visit root_path
+
+    click_button "‹ Prev"
+
+    assert_track_scrolls
+  end
+
+  test "the carousel advances on its own" do
+    visit root_path
+
+    assert_selector "[data-carousel-target=toggle]", text: "Pause"
+    assert_track_scrolls within: 6
+  end
+
+  test "the pointer pauses the carousel and leaving resumes it" do
+    visit root_path
+
+    find("[data-controller=carousel]").hover
+    assert_selector "[data-carousel-target=toggle]", text: "Play"
+
+    find("header").hover
+    assert_selector "[data-carousel-target=toggle]", text: "Pause"
+  end
+
+  # A scripted click sends no mouseenter, so the hover pause stays out of it.
+  test "the toggle button pauses and plays" do
+    visit root_path
+    assert_selector "[data-carousel-target=toggle]", text: "Pause"
+
+    page.execute_script("document.querySelector('[data-carousel-target=toggle]').click()")
+    assert_selector "[data-carousel-target=toggle]", text: "Play"
+    left = track_scroll_left
+    sleep 3.5
+    assert_equal left, track_scroll_left, "a paused carousel moved"
+
+    page.execute_script("document.querySelector('[data-carousel-target=toggle]').click()")
+    assert_selector "[data-carousel-target=toggle]", text: "Pause"
+  end
+
+  test "the navbar takes its shadow once the page has scrolled" do
+    page.current_window.resize_to(500, 600)
+    visit root_path
+
+    assert_no_selector "header.shadow-lg"
+
+    page.execute_script("window.scrollTo(0, 200)")
+    assert_selector "header.shadow-lg.border-b.border-subtle"
+
+    page.execute_script("window.scrollTo(0, 0)")
+    assert_no_selector "header.shadow-lg"
+    assert_no_selector "header.border-b"
   end
 
   test "the public root renders both sections for a signed-out visitor" do
@@ -41,9 +74,6 @@ class HomeTest < ApplicationSystemTestCase
     assert_selector "h2", text: "The Library"
   end
 
-  # The root skips authentication on purpose (PagesController#index). If that
-  # ever regresses, the family site starts demanding a login — assert we land on
-  # the root itself, not a redirect to sign-in.
   test "the root does not bounce a signed-out visitor to sign in" do
     visit root_path
 
@@ -53,15 +83,14 @@ class HomeTest < ApplicationSystemTestCase
   private
 
   def track_scroll_left
-    page.evaluate_script("document.querySelector('[x-ref=track]').scrollLeft")
+    page.evaluate_script("document.querySelector('[data-carousel-target=track]').scrollLeft").to_f
   end
 
-  # scroll-smooth animates, so poll rather than sampling once.
-  def assert_scrolled
-    deadline = Time.now + Capybara.default_max_wait_time
-    sleep 0.05 while track_scroll_left.to_f <= 0 && Time.now < deadline
+  # The track scrolls smoothly, so poll.
+  def assert_track_scrolls(within: Capybara.default_max_wait_time)
+    deadline = Time.now + within
+    sleep 0.05 while track_scroll_left <= 0 && Time.now < deadline
 
-    assert_operator track_scroll_left.to_f, :>, 0,
-                    "expected the track to scroll — Alpine did not run"
+    assert_operator track_scroll_left, :>, 0, "expected the track to scroll"
   end
 end

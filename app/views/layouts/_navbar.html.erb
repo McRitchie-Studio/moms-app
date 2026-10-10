@@ -6,9 +6,9 @@
   prefix = words.join(" ")
   logo_path = Studio.logo_for("Navbar Logo")
 %>
-<header x-data="{ scrolled: false }" @scroll.window="scrolled = window.scrollY > 20"
-        class="sticky top-0 z-50 bg-page transition-shadow duration-300"
-        :class="scrolled && 'shadow-lg border-b border-subtle'">
+<header data-controller="scroll-shadow" data-action="scroll@window->scroll-shadow#update"
+        data-scroll-shadow-scrolled-class="shadow-lg border-b border-subtle"
+        class="sticky top-0 z-50 bg-page transition-shadow duration-300">
   <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 px-4 py-3">
     <%= link_to root_path, class: "inline-flex items-center gap-3 group" do %>
       <% if logo_path %>
