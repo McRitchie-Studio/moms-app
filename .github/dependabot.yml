@@ -1,12 +1,16 @@
 version: 2
+# Dependabot opens its PRs into `accepted`, the branch review merges onto, so a
+# dependency bump walks accepted → release → main like any other change.
 updates:
 - package-ecosystem: bundler
   directory: "/"
+  target-branch: accepted
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
 - package-ecosystem: github-actions
   directory: "/"
+  target-branch: accepted
   schedule:
     interval: weekly
   open-pull-requests-limit: 10

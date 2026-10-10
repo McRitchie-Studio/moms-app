@@ -7,155 +7,29 @@ on:
   push:
     branches: [ main, release, accepted ]
 
+# One job, and it is a call. The lanes live in the hub's reusable-ci.yml and
+# check out this repo, so every script they run is this repo's own
+# (.github/scripts/apt-retry included). GitHub names each check
+# `ci / <lane>`: `ci / static`, `ci / system`.
+#
+# - static: brakeman, bundler-audit, importmap audit and rubocop, in one job.
+# - system: the unit, integration and system suites in one command. ffmpeg is
+#   an app dependency: BookStitcher shells out to it, and book_stitcher_test
+#   exercises that real path.
+#
+# Postgres is the mirror's 18, production's major (heroku pg:info).
+# test/lib/ci_workflow_test.rb pins the call and every input.
 jobs:
-  scan_ruby:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Scan for common Rails security vulnerabilities using static analysis
-        run: bin/brakeman --no-pager
-      
-      - name: Scan for known security vulnerabilities in gems used
-        run: bin/bundler-audit
-      
-  scan_js:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Scan for security vulnerabilities in JavaScript dependencies
-        run: bin/importmap audit
-
-  lint:
-    runs-on: ubuntu-latest
-    env:
-      RUBOCOP_CACHE_ROOT: tmp/rubocop
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Prepare RuboCop cache
-        uses: actions/cache@v4
-        env:
-          DEPENDENCIES_HASH: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
-        with:
-          path: ${{ env.RUBOCOP_CACHE_ROOT }}
-          key: rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
-          restore-keys: |
-            rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
-
-      - name: Lint code for consistent style
-        run: bin/rubocop -f github
-
-  test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
-
-      # redis:
-      #   image: valkey/valkey:8
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
-
-    steps:
-      - name: Install packages
-        # ffmpeg is an APP dependency, not a test convenience: BookStitcher shells
-        # out to it to concatenate chapters (app/services/book_stitcher.rb), and
-        # book_stitcher_test exercises that real path. Without it here the test
-        # lane fails on fixture generation and reads like a code defect.
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips ffmpeg
-
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Run tests
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test
-
-  system-test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
-
-      # redis:
-      #   image: valkey/valkey:8
-      #   ports:
-      #     - 6379:6379
-      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
-
-    steps:
-      - name: Install packages
-        # Kept in step with the test job so the two runners match. ffmpeg is an
-        # APP dependency (BookStitcher shells out to it), though the system lane
-        # itself does not exercise that path — book_stitcher_test runs in `test`.
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libpq-dev libvips ffmpeg
-
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Run System Tests
-        env:
-          RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test:system
-
-      - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: screenshots
-          path: ${{ github.workspace }}/tmp/screenshots
-          if-no-files-found: ignore
+  ci:
+    uses: McRitchie-Studio/mcritchie-studio/.github/workflows/reusable-ci.yml@main
+    with:
+      javascript: false
+      island-animator: false
+      playwright: false
+      rails-shards: false
+      await-gem-propagation: false
+      postgres-image: public.ecr.aws/docker/library/postgres:18
+      gem-audit-command: bin/bundler-audit
+      importmap-audit-command: bin/importmap audit
+      system-packages: libpq-dev libvips ffmpeg
+      system-command: bin/rails db:test:prepare test test:system
