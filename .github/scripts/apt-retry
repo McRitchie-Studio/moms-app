@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+#
+# Install apt packages with a bounded, retrying fetch.
+#
+#   .github/scripts/apt-retry libpq-dev libvips ffmpeg
+#
+# The hub's reusable CI lanes call this script from the caller's tree, so this
+# repo carries its own copy (mcritchie-studio's is the original). The Ubuntu
+# mirror sometimes stalls with no output; a job bound only turns that into a
+# failure, while a bounded fetch turns it into a retry.
+#
+# The budgets escalate (90s, 300s, 900s): a healthy fetch takes 10-16 seconds,
+# but successful fetches have run past 800 seconds, so the first attempt catches
+# a stall cheaply and the last sits above the slowest success measured.
+set -uo pipefail
+
+# Overridable only so a test can exercise the real file quickly; CI never sets it.
+: "${APT_RETRY_BUDGETS:=90 300 900}"
+
+if [ "$#" -eq 0 ]; then
+  echo "::error::apt-retry needs at least one package name"
+  exit 2
+fi
+
+attempt=0
+for budget in $APT_RETRY_BUDGETS; do
+  attempt=$((attempt + 1))
+
+  # `-k 10`: timeout sends SIGTERM first, and a wedged apt need not honour it.
+  # timeout signals its own process group, so no grandchild keeps the dpkg lock.
+  if sudo timeout -k 10 "$budget" bash -c \
+       'apt-get update && apt-get install --no-install-recommends -y "$@"' apt-retry "$@"; then
+    [ "$attempt" -eq 1 ] || echo "::notice::apt succeeded on attempt $attempt"
+    exit 0
+  fi
+
+  echo "::warning::apt stalled or failed inside ${budget}s (attempt $attempt)"
+
+  # An attempt killed mid-unpack leaves dpkg half-configured, which would fail
+  # the next attempt for a reason unrelated to the network.
+  sudo dpkg --configure -a || true
+done
+
+echo "::error::apt-get failed every attempt (${APT_RETRY_BUDGETS}s). The Ubuntu mirror is stalling — re-run this job."
+exit 1
