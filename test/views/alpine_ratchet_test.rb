@@ -8,8 +8,8 @@ class AlpineRatchetTest < ActiveSupport::TestCase
 
   DIRECTIVE = /
     \bx-(?:data|show|if|for|model|text|html|cloak|transition|ref|init|bind|on|effect|teleport)\b |
-    (?<=[\s"'])@[a-z][\w.-]*= |
-    (?<=[\s"']):[a-z][\w-]*= |
+    (?:^|(?<=[\s"']))@[a-z][\w.-]*= |
+    (?:^|(?<=[\s"'])):[a-z][\w-]*= |
     \bAlpine\b | alpine:init | \$(?:store|refs|dispatch|el|nextTick|watch)\b
   /x
 
@@ -22,7 +22,9 @@ class AlpineRatchetTest < ActiveSupport::TestCase
 
   test "the scan sees each kind of directive" do
     [ %(<div x-data="{}">), %(<a @click="go()">), %(<p :class="on">), %(<b x-text="n">),
-      "Alpine.store('modals')", "$store.modals.close()", "document.addEventListener('alpine:init', f)" ].each do |line|
+      "Alpine.store('modals')", "$store.modals.close()", "document.addEventListener('alpine:init', f)",
+      # An attribute on a line of its own: the scan strips each line first.
+      %(@click="open = !open"), %(:class="on && 'shadow-lg'") ].each do |line|
       assert_match DIRECTIVE, line
     end
     [ %(<div data-controller="carousel">), %(<a href="mailto:a@b.co">), %(<p class="sm:w-1/2">),
