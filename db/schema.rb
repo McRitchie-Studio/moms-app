@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_212806) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_032344) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -100,6 +100,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_212806) do
     t.string "purpose", null: false
     t.string "s3_key", null: false
     t.string "source_url"
+    t.string "stored_in"
     t.datetime "updated_at", null: false
     t.string "variant", null: false
     t.index ["owner_type", "owner_id", "purpose", "variant"], name: "idx_image_caches_owner_purpose_variant", unique: true
