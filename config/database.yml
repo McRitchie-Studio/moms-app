@@ -61,6 +61,11 @@ test:
   # explicit url wins over DATABASE_URL, which a desk points at its dev DB.
   # Unset (CI), it is nil and the DATABASE_URL merge applies as before.
   url: <%= ENV["TEST_DATABASE_URL"] %>
+  # That url is TCP (localhost), where macOS libpq negotiates GSS encryption,
+  # and a connection opened before parallelize forks its workers then
+  # segfaults them (`bin/rails db:test:prepare test`, 2026-10-27). Nothing
+  # here uses GSS, so the test database never asks for it.
+  gssencmode: disable
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
