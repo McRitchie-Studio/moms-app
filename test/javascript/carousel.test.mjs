@@ -1,12 +1,9 @@
 // [unit] The carousel's scroll decisions (app/javascript/slideshow/carousel.js).
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-
-// The app has no package.json, so Node reads a bare .js as CommonJS. A data:
-// URL import reads the same source as a module.
-const source = readFileSync(new URL("../../app/javascript/slideshow/carousel.js", import.meta.url), "utf8")
-const { GAP_PX, stepWidth, nextScroll, prevScroll } = await import(`data:text/javascript,${encodeURIComponent(source)}`)
+// The importmap name the carousel controller imports, resolved by the shared
+// hook test/javascript/support/register.mjs installs.
+import { GAP_PX, stepWidth, nextScroll, prevScroll } from "slideshow/carousel"
 
 const track = (scrollLeft) => ({ scrollLeft, clientWidth: 900, scrollWidth: 2700 })
 

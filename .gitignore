@@ -40,3 +40,8 @@
 # Local dotenv (holds secrets) — not committed
 /.env
 .worktrees/
+
+# node_modules/.studio-engine is a symlink `bin/rails studio:node:link` writes
+# to studio-engine's Node tooling package; test/lib/javascript_unit_test.rb
+# makes it. Never commit it. Guarded by test/lib/node_tooling_test.rb.
+/node_modules/
