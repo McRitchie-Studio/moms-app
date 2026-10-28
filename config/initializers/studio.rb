@@ -15,8 +15,10 @@ Studio.configure do |config|
   # Studio::Link rows served at the short /l/<token>, and the store is no longer
   # configurable — do NOT add config.magic_link_store, which now raises.
 
+  # ses_from: is ignored since SES retired; resend_from: is the fallback when
+  # RESEND_MAILER_FROM is unset. Every app sends from team@mcritchie.studio.
   config.mailer_from = Studio.mailer_from_for_transport(
-    ses_from: "Moms App <team@mcritchie.studio>"
+    resend_from: "Moms App <team@mcritchie.studio>"
   )
 
   # New SSO users start as viewers. Unreached today: shared-cookie SSO is off
