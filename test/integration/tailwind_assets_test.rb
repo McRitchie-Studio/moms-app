@@ -22,6 +22,8 @@ require "test_helper"
 #   .spinner        the engine's motion layer (engine-motion.css). It is plain
 #                   CSS, emitted on import alone: it proves the import, not any
 #                   scan.
+# application.css declares no @theme of its own, so unlike alex-build and
+# commercial-welding there is no app-palette probe here.
 # Tailwind v4 scans this repo's test/ too. It skips Ruby # comments, so naming
 # the classes here is safe, but it picks up a class written as a code literal:
 # a literal probe in the code below would compile because this file names it,
