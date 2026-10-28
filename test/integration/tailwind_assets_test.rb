@@ -2,11 +2,37 @@ require "test_helper"
 
 # [integration] The pages link the Tailwind build that application.css makes
 # through studio-engine's host.css (task satellites-adopt-css-first-tailwind),
-# and every /assets URL a page names is served. The build carries one class
-# from each thing host.css brings (studio-engine README, "Tailwind", step 5):
-# .text-heading (the theme tokens), .btn-primary (the component layer, found by
-# the engine scan) and .spinner (the motion layer).
+# and every /assets URL a page names is served. The build must carry one probe
+# class for each thing it depends on:
+#   .text-heading   the engine's theme tokens (engine.css's theme). This app's
+#                   own views use it too (books/index, pages/index ...), so it
+#                   proves the theme is imported, not any scan.
+#   .btn-primary    the engine's component @utility layer. This app's own views
+#                   use it (books/index, books/new, sessions/new), so it is
+#                   app-used here: it proves the layer is imported, not that
+#                   the engine's views are scanned.
+#   .animate-spin   the engine view scan (host.css's @source lines). Only
+#                   studio-engine's views name it (studio/modals/blocks/
+#                   _processing_card, error_logs/index, style/_modals,
+#                   components/_theme_toggle_morph, solana_sessions/
+#                   phantom_callback); nothing else in this repo does and no
+#                   engine CSS declares it, so it compiles only when Tailwind
+#                   reaches those views. If this app's code ever uses it, pick
+#                   another engine-only class.
+#   .spinner        the engine's motion layer (engine-motion.css). It is plain
+#                   CSS, emitted on import alone: it proves the import, not any
+#                   scan.
+# application.css declares no @theme of its own, so unlike alex-build and
+# commercial-welding there is no app-palette probe here.
+# Tailwind v4 scans this repo's test/ too. It skips Ruby # comments, so naming
+# the classes here is safe, but it picks up a class written as a code literal:
+# a literal probe in the code below would compile because this file names it,
+# and pass whatever the engine scan does. So the code spells each probe as
+# words joined with "-" at runtime.
 class TailwindAssetsTest < ActionDispatch::IntegrationTest
+  PROBES = [ %w[text heading], %w[btn primary], %w[animate spin], %w[spinner] ]
+           .map { |words| words.join("-") }.freeze
+
   test "the home page names only assets that are served" do
     get root_path
     assert_response :success
@@ -21,16 +47,16 @@ class TailwindAssetsTest < ActionDispatch::IntegrationTest
     assert_every_asset_served
   end
 
-  test "the linked Tailwind build carries the engine's tokens, components and motion" do
+  test "the linked Tailwind build carries the engine's tokens, components, scanned views and motion" do
     get root_path
     href = asset_urls.find { |url| url.match?(%r{\A/assets/tailwind-[0-9a-f]+\.css\z}) }
     assert href, "the layout must link the Tailwind build"
 
     get href
     assert_response :success
-    %w[.text-heading{ .btn-primary{ .spinner{].each do |rule|
-      assert_includes response.body.delete(" \n"), rule, "the Tailwind build lost #{rule.delete("{")}"
-    end
+    css = response.body.delete(" \n")
+    lost = PROBES.reject { |probe| css.include?(".#{probe}{") }
+    assert_empty lost, "the Tailwind build lost #{lost.map { |probe| ".#{probe}" }.join(", ")}"
   end
 
   private
