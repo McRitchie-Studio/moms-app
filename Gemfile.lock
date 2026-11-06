@@ -445,7 +445,7 @@ GEM
       ostruct
     stimulus-rails (1.3.4)
       railties (>= 6.0.0)
-    studio-engine (0.132.0)
+    studio-engine (0.133.0)
       aws-sdk-s3 (~> 1.218)
       csv (>= 3.0)
       faker (>= 2.0, < 4.0)
@@ -710,7 +710,7 @@ CHECKSUMS
   solid_queue (1.6.0) sha256=b5fc3bb34162e09d8f960df6400d0f9304dc80fe66c2cfface31c32b228de6a1
   sshkit (1.25.1) sha256=be3f10b9d6eb0b44d5eaba3f7cbe41bc6bb894bce4339688ac20124391455b78
   stimulus-rails (1.3.4) sha256=765676ffa1f33af64ce026d26b48e8ffb2e0b94e0f50e9119e11d6107d67cb06
-  studio-engine (0.132.0) sha256=21d8e53f1973a66d4043f3e4a5670abc9f74d5896b0b8edd5cc975dba67334e8
+  studio-engine (0.133.0) sha256=c434f11bd7a3c0a2060eb1222113b96bbdf20289a279203ae82763d7664a094d
   tailwindcss-rails (4.6.0) sha256=d99512867173d55c5ef8890427682299d8539f550cec1408b3d8667a538bd365
   tailwindcss-ruby (4.3.3) sha256=ee0a64030749862deb501acab4c4aaf5adbee13865746a33299d46d7b5d0952a
   tailwindcss-ruby (4.3.3-aarch64-linux-gnu) sha256=c86d6dd3eccc85fe0d792a832b06f2bf3c0a7a83b399308aeb9d8f5725f42a6a
