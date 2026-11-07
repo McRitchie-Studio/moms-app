@@ -120,8 +120,9 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
     end
 
     # The test environment renders a 404 as Rails' debug page, whose object ids
-    # differ per request; production serves public/404.html to both. Everything
-    # else must match.
+    # differ per request; production serves both the same not-found page (the
+    # engine's Studio::ExceptionsApp, else public/404.html: config/application.rb,
+    # test/integration/not_found_page_test.rb). Everything else must match.
     assert_equal member_answer.except(:body), stranger_answer.except(:body)
     assert_equal 404, member_answer[:status]
     assert_nil member_answer[:location]
