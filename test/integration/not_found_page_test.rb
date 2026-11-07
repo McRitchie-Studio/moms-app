@@ -11,6 +11,7 @@ require "test_helper"
 class NotFoundPageTest < ActionDispatch::IntegrationTest
   APP_NAME = "Moms App"
   ENGINE_PAGE = defined?(Studio::ExceptionsApp)
+  OLD_BROWSER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36"
 
   def with_production_exceptions
     config = Rails.application.env_config
@@ -56,6 +57,18 @@ class NotFoundPageTest < ActionDispatch::IntegrationTest
 
     assert_friendly_page
     assert_not response.redirect?
+  end
+
+  # allow_browser :modern answers an old browser with a 406. On the engine page
+  # that answer is thrown away and the branded public/404.html answers; on the
+  # locked engine Rails serves the same file. Status 404 either way.
+  test "an old browser gets the branded static page, status 404" do
+    get_lost "/no-such-page", headers: { "User-Agent" => OLD_BROWSER }
+
+    assert_response :not_found
+    assert_select "body[data-static-404] [data-test='not-found']", count: 1
+    assert_select "a[data-test='not-found-home'][href='/']", text: "Back to #{APP_NAME}"
+    assert_select "[data-studio-not-found]", count: 0
   end
 
   test "a JSON request answers 404 JSON, not the HTML page" do
