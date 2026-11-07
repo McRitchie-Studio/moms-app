@@ -40,6 +40,7 @@
       border-radius: 1rem;
     }
     img { display: block; width: 4rem; height: 4rem; margin: 0 auto 1.5rem; object-fit: contain; }
+      .wordmark { margin: 0 0 1.5rem; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; color: #A8336C; }
     .eyebrow {
       margin: 0 0 0.5rem;
       font-size: 0.75rem;
@@ -70,6 +71,7 @@
       }
       main { background: #2B1C24; border-color: #47303C; }
       .eyebrow { color: #F29AC4; }
+        .wordmark { color: #F29AC4; }
       h1 { color: #FFFFFF; }
       a.home { background: #B83F7A; }
       a.home:hover { background: #9E3267; }
@@ -79,7 +81,7 @@
 </head>
 <body data-static-404>
   <main data-test="not-found" aria-labelledby="not-found-title">
-    <img src="/logo.png" alt="Moms App" width="64" height="64">
+    <p class="wordmark">Moms App</p>
     <p class="eyebrow">404 &middot; Not found</p>
     <h1 id="not-found-title">This page isn’t here</h1>
     <p class="message">The address may be mistyped, or the page may have moved. Head back home and pick up from there.</p>

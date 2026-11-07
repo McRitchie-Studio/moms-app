@@ -105,8 +105,8 @@ class NotFoundPageTest < ActionDispatch::IntegrationTest
     home = page.at_css("a[data-test='not-found-home']")
     assert_equal "/", home["href"]
     assert_equal "Back to #{APP_NAME}", home.text
-    assert page.at_css("img[src='/logo.png'][alt='Moms App']"), "the brand mark"
-    assert Rails.public_path.join("logo.png").file?, "/logo.png is in public/"
+    assert_equal "Moms App", page.at_css("p.wordmark").text, "the app named in words (logo.png is a placeholder square)"
+    assert_empty page.css("img"), "no placeholder image"
     assert_includes page.at_css("style").text, "prefers-color-scheme: dark"
     assert_empty page.css("script"), "the last resort runs nothing"
     assert_empty page.css("link[rel='stylesheet']"), "and loads nothing that could be missing"
