@@ -1,8 +1,11 @@
 <% content_for :title, "Digest a book" %>
 
-<div class="max-w-xl mx-auto">
-  <div class="mb-4"><%= link_to "← Library", books_path, class: "text-muted hover:text-primary text-sm" %></div>
-  <h1 class="text-2xl font-extrabold text-heading mb-2">Digest a book</h1>
+<%# The engine page header (studio/_page_header) under Home › Library, which
+    replaces the old "← Library" link. It is a direct child of the layout's
+    <main>, outside the narrow form column, so it stays pinned on scroll. %>
+<%= render "studio/page_header", title: "Digest a book", crumbs: studio_crumbs(parent: :library) %>
+
+<div class="max-w-xl mx-auto mt-6">
   <p class="text-secondary mb-6">
     Paste a LibriVox / Internet Archive identifier. We'll pull the cover and
     metadata, then stitch the first chapters into one playable file.

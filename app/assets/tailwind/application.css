@@ -28,3 +28,16 @@
     border-color: var(--color-gray-200, currentcolor);
   }
 }
+
+/* The photo carousel's track (slideshow/_carousel) scrolls with no visible
+ * scrollbar: Firefox and current Chrome read scrollbar-width; Safari and older
+ * Chrome read the WebKit pseudo-element. A class, not an inline style, so the
+ * markup carries no style attribute. */
+@layer components {
+  .carousel-track {
+    scrollbar-width: none;
+  }
+  .carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+}
