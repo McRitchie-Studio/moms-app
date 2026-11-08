@@ -1,8 +1,8 @@
 <% content_for :title, "Mom's Photos" %>
 
-<div class="mb-6">
-  <h1 class="text-3xl font-extrabold text-heading">Mom's <span class="text-primary">Photos</span></h1>
-  <p class="text-secondary">A little slideshow for Karen — consolidated from the old karenmcritchie.com.</p>
-</div>
+<%# The engine page header (studio/_page_header) under Home, a direct child of
+    the layout's <main>. %>
+<%= render "studio/page_header", title: "Mom's Photos", crumbs: studio_crumbs(parent: :home) %>
+<p class="text-secondary mt-2 mb-6">A little slideshow for Karen — consolidated from the old karenmcritchie.com.</p>
 
 <%= render "slideshow/carousel" %>

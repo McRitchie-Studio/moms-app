@@ -14,10 +14,13 @@
 
     <%= render "layouts/navbar" %>
 
-    <div class="max-w-7xl mx-auto px-4 py-6">
+    <%# The page container. A converted page renders studio/_page_header as its
+        direct child, so the header row stays pinned under the navbar for the
+        whole page (a row inside a shorter wrapper unsticks when it ends). %>
+    <main class="max-w-7xl mx-auto px-4 py-6">
       <%= render "layouts/studio/flash" %>
       <%= yield %>
-    </div>
+    </main>
 
     <%# The engine's site footer (studio-engine >= 0.84): facts in
         config/initializers/studio.rb; the engine decides where it shows. %>

@@ -1,8 +1,11 @@
 <% content_for :title, @book.title %>
 
-<div class="mb-4"><%= link_to "← Library", books_path, class: "text-muted hover:text-primary text-sm" %></div>
+<%# The engine page header (studio/_page_header) under Home › Library, which
+    replaces the old "← Library" link. The title is the page's one h1, above the
+    cover and the details, as a direct child of the layout's <main>. %>
+<%= render "studio/page_header", title: @book.title, crumbs: studio_crumbs(parent: :library) %>
 
-<div class="grid md:grid-cols-3 gap-6">
+<div class="grid md:grid-cols-3 gap-6 mt-6">
   <div class="md:col-span-1">
     <div class="card p-0 overflow-hidden">
       <% if @book.cover.attached? %>
@@ -14,7 +17,6 @@
   </div>
 
   <div class="md:col-span-2">
-    <h1 class="text-3xl font-extrabold text-heading"><%= @book.title %></h1>
     <p class="text-secondary text-lg">by <%= @book.author %></p>
     <% if @book.narrator.present? %>
       <p class="text-muted">Read by <%= @book.narrator %></p>

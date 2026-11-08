@@ -1,10 +1,12 @@
 <% content_for :title, "Library" %>
 
-<div class="flex items-center justify-between mb-6">
-  <h1 class="text-3xl font-extrabold text-heading">Your <span class="text-primary">Library</span></h1>
-  <% if admin? %>
-    <%= link_to "Digest a book", new_book_path, class: "btn btn-primary" %>
-  <% end %>
-</div>
+<%# The engine page header (studio/_page_header), a direct child of the layout's
+    <main>, so it stays pinned under the navbar while the grid scrolls. The
+    trail names the page "Library", as the navbar does. "Digest a book" is the
+    header's one action, for an admin only. %>
+<%= render "studio/page_header", title: "Your Library", crumb_label: "Library", crumbs: studio_crumbs(:library),
+      action: (admin? ? { label: "Digest a book", href: new_book_path } : nil) %>
 
-<%= render "books/grid", books: @books %>
+<div class="mt-6">
+  <%= render "books/grid", books: @books %>
+</div>

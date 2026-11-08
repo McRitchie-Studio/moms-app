@@ -5,6 +5,9 @@
   last_word = words.pop
   prefix = words.join(" ")
   logo_path = Studio.logo_for("Navbar Logo")
+  # The brand is the page's h1 only on the home dashboard, which has no title
+  # of its own. Every other page carries its h1 in its page header.
+  brand_tag = current_page?(root_path) ? :h1 : :span
 %>
 <header data-controller="scroll-shadow" data-action="scroll@window->scroll-shadow#update"
         data-scroll-shadow-scrolled-class="shadow-lg border-b border-subtle"
@@ -15,9 +18,9 @@
         <img src="<%= logo_path %>" alt="<%= Studio.app_name %>"
              class="w-10 h-10 rounded-full shadow group-hover:scale-105 transition">
       <% end %>
-      <span class="text-2xl font-extrabold text-heading tracking-tight">
+      <%= content_tag brand_tag, class: "text-2xl font-extrabold text-heading tracking-tight" do %>
         <%= prefix %> <span class="text-primary"><%= last_word %></span>
-      </span>
+      <% end %>
     <% end %>
 
     <nav class="flex items-center gap-5">
