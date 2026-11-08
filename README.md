@@ -83,6 +83,14 @@ blank for the whole book, or set a number to stitch just the first N chapters.
   `studio_site_footer` in the layout). Its facts live in
   `config/initializers/studio.rb`: wordmark, logo, tagline and the navbar's links,
   with no address, map, phone, email, social profiles or legal line.
+- Page header: the engine's `studio/page_header` (engine ≥ 0.131) on the library
+  (`/books`, with "Digest a book" as its action for an admin), the digest form
+  and a book (both under Library), and the slideshow (under Home). The crumbs come
+  from one parent map, `config/initializers/studio_crumbs.rb`. Each row is a
+  direct child of the layout's `<main>`, so it stays pinned under the navbar.
+  Two pages keep their own headings: the home dashboard (`/`) is two `h2`
+  sections with no title row, so the navbar brand is its `h1` there and only
+  there; the sign-in card (`/login`) is a centred card, not a title row.
 
 Only public-domain works are supported by design.
 
