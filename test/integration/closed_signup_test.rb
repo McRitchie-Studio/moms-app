@@ -284,6 +284,21 @@ class ClosedSignupTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "private family site"
   end
 
+  # find_by(email: nil) matches any account without an email; a Google callback
+  # with no address must sign nobody in and link nobody.
+  test "a Google callback with no email signs nobody in, even with a no-email account present" do
+    no_email = User.create!(name: "No Email")
+    mock_google(email: nil, uid: "g-no-email")
+
+    assert_no_difference -> { User.count } do
+      post "/auth/google_oauth2"
+      follow_redirect!
+    end
+
+    assert_nil session[Studio.session_key]
+    assert_nil no_email.reload.uid
+  end
+
   test "a member signs in with Google by address, and the Google id is linked" do
     mock_google(email: MEMBER, uid: "g-mom")
 

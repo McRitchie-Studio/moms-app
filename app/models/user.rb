@@ -35,10 +35,18 @@ class User < ApplicationRecord
 
   # --- Membership: public signup is closed (ClosedSignup) ---------------------
 
+  # The member holding this address, or nil. One lookup for the signup gate and
+  # for sign-in. A blank address finds nobody: find_by(email: nil) matches ANY
+  # account without an email. LOWER() also covers a row saved before the
+  # normalizer shipped.
+  def self.find_member_by_email(email)
+    email = email.to_s.strip.downcase.presence
+    email && where(arel_table[:email].lower.eq(email)).first
+  end
+
   # Is there an account for this address? The only question the signup gate asks.
   def self.member_email?(email)
-    email = email.to_s.strip.downcase
-    email.present? && exists?(email: email)
+    find_member_by_email(email).present?
   end
 
   # Does this Google identity belong to an account, by its linked Google id or by
@@ -58,11 +66,13 @@ class User < ApplicationRecord
   # account is linked by address only on a verified one, since an unverified
   # address proves nothing about who holds the mailbox.
   def self.from_omniauth(auth, email_verified: false)
+    return nil if auth.uid.blank?
+
     user = find_by(provider: auth.provider, uid: auth.uid)
     return user if user
     return nil unless email_verified
 
-    user = find_by(email: auth.info.email)
+    user = find_member_by_email(auth.info&.email)
     return nil unless user
 
     user.update!(provider: auth.provider, uid: auth.uid)
