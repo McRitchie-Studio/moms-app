@@ -108,7 +108,9 @@ class UserTest < ActiveSupport::TestCase
 
   test "a legacy mixed-case row is found by the gate and by sign-in" do
     mom = User.create!(email: "mom@example.com", name: "Mom")
-    mom.update_column(:email, "Mom@Example.com")
+    # SQL string, not update_column: the normalizer would downcase it back.
+    User.where(id: mom.id).update_all("email = 'Mom@Example.com'")
+    assert_equal "Mom@Example.com", User.where(id: mom.id).pick(:email)
 
     assert User.member_email?("MOM@example.com")
     assert_equal mom, User.from_omniauth(google_auth(email: "mom@EXAMPLE.com", uid: "g-mom"), email_verified: true)
