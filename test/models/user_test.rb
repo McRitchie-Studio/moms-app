@@ -95,6 +95,33 @@ class UserTest < ActiveSupport::TestCase
     assert_nil mom.reload.uid
   end
 
+  # find_by(email: nil) matches any account without an email, so a verified
+  # callback with no address must link nobody, not the first no-email account.
+  test "from_omniauth never links a stranger through a missing email" do
+    no_email = User.create!(name: "No Email")
+
+    [ nil, "", "   " ].each do |blank|
+      assert_nil User.from_omniauth(google_auth(email: blank, uid: "g-blank"), email_verified: true)
+    end
+    assert_nil no_email.reload.uid
+  end
+
+  test "a legacy mixed-case row is found by the gate and by sign-in" do
+    mom = User.create!(email: "mom@example.com", name: "Mom")
+    # SQL string, not update_column: the normalizer would downcase it back.
+    User.where(id: mom.id).update_all("email = 'Mom@Example.com'")
+    assert_equal "Mom@Example.com", User.where(id: mom.id).pick(:email)
+
+    assert User.member_email?("MOM@example.com")
+    assert_equal mom, User.from_omniauth(google_auth(email: "mom@EXAMPLE.com", uid: "g-mom"), email_verified: true)
+  end
+
+  test "from_omniauth refuses a blank Google uid" do
+    User.create!(email: "mom@example.com", name: "Mom", provider: "google_oauth2", uid: "")
+
+    assert_nil User.from_omniauth(google_auth(email: "mom@example.com", uid: ""), email_verified: true)
+  end
+
   test "from_omniauth finds an already linked member without the address" do
     dad = User.create!(email: "dad@example.com", name: "Dad", provider: "google_oauth2", uid: "g-dad")
 
