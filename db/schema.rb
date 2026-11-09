@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_08_203727) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_09_020021) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -117,6 +117,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_203727) do
     t.index ["byte_size"], name: "index_solid_cache_entries_on_byte_size"
     t.index ["key_hash", "byte_size"], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
     t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
+  end
+
+  create_table "studio_connections", force: :cascade do |t|
+    t.string "provider", null: false
+    t.string "account_key", null: false
+    t.text "account_secret"
+    t.string "label"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.datetime "access_expires_at"
+    t.datetime "refresh_expires_at"
+    t.json "metadata", default: {}, null: false
+    t.string "connected_by"
+    t.datetime "connected_at", null: false
+    t.datetime "last_refreshed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "account_key"], name: "index_studio_connections_on_provider_and_account_key", unique: true
   end
 
   create_table "studio_email_deliveries", force: :cascade do |t|
