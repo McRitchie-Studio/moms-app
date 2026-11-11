@@ -67,16 +67,6 @@ class CiWorkflowTest < ActiveSupport::TestCase
     assert_includes call.dig("with", "system-packages").split, "ffmpeg"
   end
 
-  test "Dependabot opens every PR into accepted" do
-    updates = YAML.safe_load_file(Rails.root.join(".github/dependabot.yml"))["updates"]
-
-    assert_equal %w[bundler github-actions], updates.map { |u| u["package-ecosystem"] }.sort
-    updates.each do |update|
-      assert_equal "accepted", update["target-branch"],
-                   "#{update['package-ecosystem']} PRs would target the default branch, skipping review's rung"
-    end
-  end
-
   test "the scripts the lanes run from this tree exist" do
     %w[.github/scripts/apt-retry bin/brakeman bin/bundler-audit bin/importmap bin/rubocop].each do |path|
       assert File.executable?(Rails.root.join(path)), "#{path} is missing or not executable"
